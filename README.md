@@ -12,9 +12,9 @@
   - [⚙️ Prerequisites](#️-prerequisites)
   - [🚀 Quick Start](#-quick-start)
     - [1. Install Dependencies](#1-install-dependencies)
-    - [2. Run a local network in the first terminal:](#2-run-a-local-network-in-the-first-terminal)
+    - [2. Run a local network in the first terminal](#2-run-a-local-network-in-the-first-terminal)
     - [3. On a second terminal, deploy the test contract in hardhat local network](#3-on-a-second-terminal-deploy-the-test-contract-in-hardhat-local-network)
-    - [4. On a third terminal, start your NextJS app:](#4-on-a-third-terminal-start-your-nextjs-app)
+    - [4. On a third terminal, start your NextJS app](#4-on-a-third-terminal-start-your-nextjs-app)
     - [5. Start Backend Server](#5-start-backend-server)
   - [🧪 Testing](#-testing)
   - [🛠️ Development](#️-development)
@@ -60,7 +60,6 @@ Before running this project, ensure you have the following installed:
 - **Java** (>= 21)
 - **Spring Boot** (>= 3.4.9)
 
-
 ## 🚀 Quick Start
 
 Follow these steps to get the project running locally:
@@ -71,7 +70,7 @@ Follow these steps to get the project running locally:
 yarn install
 ```
 
-### 2. Run a local network in the first terminal:
+### 2. Run a local network in the first terminal
 
 ```bash
 yarn chain
@@ -85,20 +84,24 @@ This command starts a local Ethereum network using Hardhat. The network runs on 
 yarn deploy
 ```
 
-### 4. On a third terminal, start your NextJS app:
+### 4. On a third terminal, start your NextJS app
 
 ```bash
 yarn start
 ```
-Visit your app on: `http://localhost:3000`. 
+
+Visit your app on: `http://localhost:3000`.
 
 ### 5. Start Backend Server
+
 ```bash
 mvn springboot:run
 ```
-the backend API will be available at http://localhost:8080.
+
+the backend API will be available at <http://localhost:8080>.
 
 ## 🧪 Testing
+
 Run the smart contract tests to verify everything is working correctly:
 
 ```bash
@@ -115,7 +118,7 @@ Add deployment scripts in hardhat/deploy/
 
 The frontend automatically adapts to contract changes with hot reload
 
-### 2. Frontend Development 
+### 2. Frontend Development
 
 The frontend is built with scaffold-eth-2
 
@@ -132,6 +135,7 @@ Web3j generates Java classes from smart contracts automatically
 File storage configuration in FileStorage service
 
 ## 📋 Features
+
 - ✅ Contract Hot Reload: Frontend auto-adapts to smart contract changes
 - 🪝 Custom Hooks: React hooks wrapper around Wagmi for simplified contract interactions
 - 🧱 Reusable Components: Common Web3 components for rapid development
