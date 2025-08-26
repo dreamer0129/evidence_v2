@@ -60,6 +60,7 @@ yarn next:check-types # TypeScript type checking
 mvn spring-boot:run  # Start Spring Boot server (localhost:8080)
 mvn test             # Run backend tests
 mvn compile          # Compile Java code
+mvn web3j:generate-sources  # Genreate Java class from solidity.  
 ```
 
 ### Code Quality

@@ -49,6 +49,7 @@ The system ensures the integrity and authenticity of digital evidence by storing
 │ ├── hooks/ # Custom Wagmi hooks
 │ └── components/ # Reusable Web3 components
 └── src/ # Spring Boot Application
+│ ├── generated/ # Smart contract to java class
 
 ## ⚙️ Prerequisites
 
