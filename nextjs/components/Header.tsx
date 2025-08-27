@@ -14,6 +14,7 @@ import {
   HomeIcon,
 } from "@heroicons/react/24/outline";
 import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
+import { useAuth } from "~~/contexts/AuthContext";
 import { useOutsideClick, useTargetNetwork } from "~~/hooks/scaffold-eth";
 
 type HeaderMenuLink = {
@@ -82,6 +83,7 @@ export const HeaderMenuLinks = () => {
 export const Header = () => {
   const { targetNetwork } = useTargetNetwork();
   const isLocalNetwork = targetNetwork.id === hardhat.id;
+  const { user, logout } = useAuth();
 
   const burgerMenuRef = useRef<HTMLDetailsElement>(null);
   useOutsideClick(burgerMenuRef, () => {
@@ -117,6 +119,14 @@ export const Header = () => {
         </ul>
       </div>
       <div className="navbar-end grow mr-4">
+        {user ? (
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-base-content">欢迎, {user.username}</span>
+            <button onClick={logout} className="btn btn-sm btn-ghost hover:btn-error">
+              退出
+            </button>
+          </div>
+        ) : null}
         <RainbowKitCustomConnectButton />
         {isLocalNetwork && <FaucetButton />}
       </div>
