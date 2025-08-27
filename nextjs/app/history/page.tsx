@@ -1,6 +1,7 @@
 "use client";
 
 import type { NextPage } from "next";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~~/components/ui/table";
 
 const mockData = [
   {
@@ -29,32 +30,32 @@ const History: NextPage = () => {
       <h1 className="text-3xl font-bold text-center mb-8">历史记录</h1>
 
       <div className="overflow-x-auto">
-        <table className="table w-full">
-          <thead>
-            <tr>
-              <th></th>
-              <th>文件名称</th>
-              <th>存证时间</th>
-              <th>文件哈希</th>
-              <th>交易哈希</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead></TableHead>
+              <TableHead>文件名称</TableHead>
+              <TableHead>存证时间</TableHead>
+              <TableHead>文件哈希</TableHead>
+              <TableHead>交易哈希</TableHead>
+              <TableHead>操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {mockData.map((item, index) => (
-              <tr key={index}>
-                <th>{index + 1}</th>
-                <td>{item.fileName}</td>
-                <td>{item.timestamp}</td>
-                <td className="font-mono">{item.fileHash}</td>
-                <td className="font-mono">{item.txHash}</td>
-                <td>
+              <TableRow key={index}>
+                <TableCell>{index + 1}</TableCell>
+                <TableCell>{item.fileName}</TableCell>
+                <TableCell>{item.timestamp}</TableCell>
+                <TableCell className="font-mono">{item.fileHash}</TableCell>
+                <TableCell className="font-mono">{item.txHash}</TableCell>
+                <TableCell>
                   <button className="btn btn-sm btn-primary">下载证书</button>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );
