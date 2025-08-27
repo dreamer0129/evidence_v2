@@ -27,7 +27,7 @@ export const AuthPage: React.FC = () => {
         )}
 
         <div className="mt-8 text-center text-sm text-base-content/60">
-          <p>© 2024 区块链存证系统. 保留所有权利.</p>
+          <p>© 2025 区块链存证系统. 保留所有权利.</p>
         </div>
       </div>
     </div>

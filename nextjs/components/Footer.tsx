@@ -4,6 +4,7 @@ import { hardhat } from "viem/chains";
 import { CurrencyDollarIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { SwitchTheme } from "~~/components/SwitchTheme";
 import { Faucet } from "~~/components/scaffold-eth";
+import { useAuth } from "~~/contexts/AuthContext";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useGlobalState } from "~~/services/store/store";
 
@@ -14,6 +15,12 @@ export const Footer = () => {
   const nativeCurrencyPrice = useGlobalState(state => state.nativeCurrency.price);
   const { targetNetwork } = useTargetNetwork();
   const isLocalNetwork = targetNetwork.id === hardhat.id;
+  const { user } = useAuth();
+
+  // 如果用户未登录，不渲染整个footer
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-0 py-5 px-1 mb-11 lg:mb-0">

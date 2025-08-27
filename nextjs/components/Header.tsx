@@ -90,6 +90,11 @@ export const Header = () => {
     burgerMenuRef?.current?.removeAttribute("open");
   });
 
+  // 如果用户未登录，不渲染整个header
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="sticky lg:static top-0 navbar bg-base-100 min-h-0 shrink-0 justify-between z-20 shadow-md shadow-secondary px-0 sm:px-2">
       <div className="navbar-start w-auto lg:w-1/2">
@@ -119,14 +124,12 @@ export const Header = () => {
         </ul>
       </div>
       <div className="navbar-end grow mr-4">
-        {user ? (
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-base-content">欢迎, {user.username}</span>
-            <button onClick={logout} className="btn btn-sm btn-ghost hover:btn-error">
-              退出
-            </button>
-          </div>
-        ) : null}
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-base-content">欢迎, {user.username}</span>
+          <button onClick={logout} className="btn btn-sm btn-ghost hover:btn-error">
+            退出
+          </button>
+        </div>
         <RainbowKitCustomConnectButton />
         {isLocalNetwork && <FaucetButton />}
       </div>
