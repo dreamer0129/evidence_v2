@@ -63,7 +63,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="form-control">
+          <div className="form-control w-full max-w-xs mx-auto">
             <label className="label">
               <span className="label-text">用户名</span>
             </label>
@@ -72,14 +72,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
               name="username"
               value={formData.username}
               onChange={handleChange}
-              className="input input-bordered"
+              className="input input-bordered w-full"
               placeholder="请输入用户名"
               required
               disabled={isLoading}
             />
           </div>
 
-          <div className="form-control">
+          <div className="form-control w-full max-w-xs mx-auto">
             <label className="label">
               <span className="label-text">密码</span>
             </label>
@@ -88,15 +88,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className="input input-bordered"
+              className="input input-bordered w-full"
               placeholder="请输入密码"
               required
               disabled={isLoading}
             />
           </div>
 
-          <div className="form-control mt-6">
-            <button type="submit" className="btn btn-primary" disabled={isLoading}>
+          <div className="form-control mt-6 w-full max-w-xs mx-auto">
+            <button type="submit" className="btn btn-primary w-full" disabled={isLoading}>
               {isLoading ? <span className="loading loading-spinner"></span> : null}
               登录
             </button>

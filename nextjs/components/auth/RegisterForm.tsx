@@ -127,7 +127,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="form-control">
+          <div className="form-control w-full max-w-xs mx-auto">
             <label className="label">
               <span className="label-text">用户名</span>
             </label>
@@ -136,7 +136,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
               name="username"
               value={formData.username}
               onChange={handleChange}
-              className="input input-bordered"
+              className="input input-bordered w-full"
               placeholder="请输入用户名"
               required
               minLength={3}
@@ -144,7 +144,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
             />
           </div>
 
-          <div className="form-control">
+          <div className="form-control w-full max-w-xs mx-auto">
             <label className="label">
               <span className="label-text">邮箱</span>
             </label>
@@ -153,14 +153,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="input input-bordered"
+              className="input input-bordered w-full"
               placeholder="请输入邮箱"
               required
               disabled={isLoading}
             />
           </div>
 
-          <div className="form-control">
+          <div className="form-control w-full max-w-xs mx-auto">
             <label className="label">
               <span className="label-text">密码</span>
             </label>
@@ -169,7 +169,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className="input input-bordered"
+              className="input input-bordered w-full"
               placeholder="请输入密码（至少6位）"
               required
               minLength={6}
@@ -177,7 +177,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
             />
           </div>
 
-          <div className="form-control">
+          <div className="form-control w-full max-w-xs mx-auto">
             <label className="label">
               <span className="label-text">确认密码</span>
             </label>
@@ -186,7 +186,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className="input input-bordered"
+              className="input input-bordered w-full"
               placeholder="请再次输入密码"
               required
               minLength={6}
@@ -194,8 +194,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
             />
           </div>
 
-          <div className="form-control mt-6">
-            <button type="submit" className="btn btn-primary" disabled={isLoading}>
+          <div className="form-control mt-6 w-full max-w-xs mx-auto">
+            <button type="submit" className="btn btn-primary w-full" disabled={isLoading}>
               {isLoading ? <span className="loading loading-spinner"></span> : null}
               注册
             </button>
