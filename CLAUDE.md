@@ -7,14 +7,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a full-stack blockchain evidence management system with three main components:
 
 1. **Hardhat** (`/hardhat/`) - Ethereum smart contract development
+
    - Solidity contracts in `contracts/`
    - TypeScript deployment scripts in `deploy/`
    - Hardhat tests in `test/`
 
 2. **Next.js Frontend** (`/nextjs/`) - Web3 DApp interface
+
    - React components in `components/`
    - Custom Web3 hooks in `hooks/scaffold-eth/`
    - Scaffold-ETH 2 based architecture
+   - shadcn/ui components
 
 3. **Spring Boot Backend** (`/src/`) - Java REST API
    - Main application: `EvidenceApplication.java`
@@ -60,7 +63,7 @@ yarn next:check-types # TypeScript type checking
 mvn spring-boot:run  # Start Spring Boot server (localhost:8080)
 mvn test             # Run backend tests
 mvn compile          # Compile Java code
-mvn web3j:generate-sources  # Genreate Java class from solidity.  
+mvn web3j:generate-sources  # Genreate Java class from solidity.
 ```
 
 ### Code Quality
@@ -82,7 +85,7 @@ yarn next:check-types    # Type check Next.js code
 ## 🎯 Development Workflow
 
 1. **Start local blockchain**: `yarn chain` (Terminal 1)
-2. **Deploy contracts**: `yarn deploy` (Terminal 2)  
+2. **Deploy contracts**: `yarn deploy` (Terminal 2)
 3. **Start frontend**: `yarn start` (Terminal 3)
 4. **Start backend**: `mvn spring-boot:run` (Terminal 4)
 
