@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { LoginRequest } from "../../types/auth";
+import { toast } from "react-hot-toast";
 
 interface LoginFormProps {
   onSwitchToRegister: () => void;
@@ -26,13 +27,32 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 表单验证
+    if (!formData.username.trim()) {
+      setError("请输入用户名");
+      return;
+    }
+    if (!formData.password) {
+      setError("请输入密码");
+      return;
+    }
+
     setIsLoading(true);
     setError("");
 
     try {
       await login(formData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "登录失败");
+      let errorMessage = "登录失败，请稍后重试";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
+      toast.error(errorMessage, {
+        position: "top-center",
+        duration: 5000,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -44,7 +64,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
         <h2 className="card-title text-2xl mb-6 justify-center">用户登录</h2>
 
         {error && (
-          <div className="alert alert-error mb-4">
+          <div className="alert alert-error mb-4 animate-fade-in">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="stroke-current shrink-0 h-6 w-6"
@@ -58,7 +78,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
                 d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <span>{error}</span>
+            <div>
+              <h3 className="font-bold">登录遇到问题</h3>
+              <span className="text-sm">{error}</span>
+            </div>
           </div>
         )}
 
