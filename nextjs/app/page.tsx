@@ -1,91 +1,65 @@
 "use client";
 
-import Link from "next/link";
 import type { NextPage } from "next";
-import { ArrowUpTrayIcon, CheckBadgeIcon, ClockIcon } from "@heroicons/react/24/outline";
-import {
-  AnimatedCard,
-  CardBody,
-  CardDescription,
-  CardTitle,
-  CardVisual,
-} from "~~/components/ui/interactive-bento-grid";
+import { Gallery4, Gallery4Item } from "~~/components/blocks/gallery4";
+
+const FeatureCards = () => {
+  const featureItems: Gallery4Item[] = [
+    {
+      id: "file-upload",
+      title: "文件存证",
+      description: "通过文件上传或哈希上传的方式进行存证",
+      href: "/upload",
+      image:
+        "https://images.unsplash.com/photo-1618044619888-009e412ff12a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+    },
+    {
+      id: "verification",
+      title: "存证验证",
+      description: "通过多种方式快速验证存证数据的真实性和有效性",
+      href: "/verify",
+      image:
+        "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+    },
+    {
+      id: "history",
+      title: "历史记录",
+      description: "查看您的历史存证记录并下载存证证明",
+      href: "/history",
+      image:
+        "https://images.unsplash.com/photo-1551288049-bebda4e38f71?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+    },
+  ];
+
+  return (
+    <div className="grow bg-base-300 w-full">
+      <Gallery4 title="主要功能" description="区块链存证系统为您提供安全可靠的数据存证解决方案" items={featureItems} />
+    </div>
+  );
+};
+
+const InfoCards = () => {
+  return (
+    <>
+      <div className="flex items-center flex-col pt-6 pb-4">
+        <div className="px-5">
+          <h1 className="text-center">
+            <span className="block text-xl mb-1">欢迎使用</span>
+            <span className="block text-3xl font-bold">区块链存证系统</span>
+          </h1>
+          <p className="text-center text-base mt-2">一个安全、可信、高效的电子数据存证平台</p>
+        </div>
+      </div>
+    </>
+  );
+};
 
 const Home: NextPage = () => {
   return (
     <>
-      <div className="flex items-center flex-col grow pt-10">
-        <div className="px-5">
-          <h1 className="text-center">
-            <span className="block text-2xl mb-2">欢迎使用</span>
-            <span className="block text-4xl font-bold">区块链存证系统</span>
-          </h1>
-          <p className="text-center text-lg mt-4">一个安全、可信、高效的电子数据存证平台</p>
-        </div>
+      <InfoCards />
 
-        <div className="grow bg-base-300 w-full mt-16 px-8 py-12">
-          ;
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <AnimatedCard>
-              <CardVisual>
-                <div className="flex items-center justify-center h-full">
-                  <ArrowUpTrayIcon className="h-16 w-16 text-primary" />
-                </div>
-              </CardVisual>
-              <CardBody>
-                <CardTitle>文件存证</CardTitle>
-                <CardDescription>
-                  通过
-                  <Link href="/upload" className="link">
-                    文件上传
-                  </Link>
-                  或
-                  <Link href="/upload" className="link">
-                    哈希上传
-                  </Link>
-                  的方式进行存证
-                </CardDescription>
-              </CardBody>
-            </AnimatedCard>
-
-            <AnimatedCard>
-              <CardVisual>
-                <div className="flex items-center justify-center h-full">
-                  <CheckBadgeIcon className="h-16 w-16 text-primary" />
-                </div>
-              </CardVisual>
-              <CardBody>
-                <CardTitle>存证验证</CardTitle>
-                <CardDescription>
-                  通过
-                  <Link href="/verify" className="link">
-                    多种方式
-                  </Link>
-                  快速验证存证数据的真实性和有效性
-                </CardDescription>
-              </CardBody>
-            </AnimatedCard>
-
-            <AnimatedCard>
-              <CardVisual>
-                <div className="flex items-center justify-center h-full">
-                  <ClockIcon className="h-16 w-16 text-primary" />
-                </div>
-              </CardVisual>
-              <CardBody>
-                <CardTitle>历史记录</CardTitle>
-                <CardDescription>
-                  查看您的
-                  <Link href="/history" className="link">
-                    历史存证记录
-                  </Link>
-                  并下载存证证明
-                </CardDescription>
-              </CardBody>
-            </AnimatedCard>
-          </div>
-        </div>
-      </div>
+      <FeatureCards />
     </>
   );
 };
