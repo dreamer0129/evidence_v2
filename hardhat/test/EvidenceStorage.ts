@@ -71,7 +71,9 @@ describe("EvidenceStorage", function () {
 
     it("Should submit hash-only evidence successfully", async function () {
       // Execute the transaction
-      const tx = await evidenceStorage.connect(user2).submitHashEvidence("secret-file.txt", testHashInfo2, "Hash only memo");
+      const tx = await evidenceStorage
+        .connect(user2)
+        .submitHashEvidence("secret-file.txt", testHashInfo2, "Hash only memo");
 
       // Verify event was emitted
       await expect(tx).to.emit(evidenceStorage, "EvidenceSubmitted");
@@ -277,7 +279,9 @@ describe("EvidenceStorage", function () {
       };
 
       // Execute the actual transaction
-      const tx = await evidenceStorage.connect(user1).submitEvidence(testMetadata, newHashInfo, "Unauthorized revoke memo");
+      const tx = await evidenceStorage
+        .connect(user1)
+        .submitEvidence(testMetadata, newHashInfo, "Unauthorized revoke memo");
 
       // Get the evidence ID by checking the latest evidence for this user
       const userEvidences = await evidenceStorage.getUserEvidences(user1.address);

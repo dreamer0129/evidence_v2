@@ -51,7 +51,8 @@ class AuthService {
               }
             } catch {
               // 如果不是JSON，直接使用错误文本（如果比默认错误信息更有用）
-              if (errorText.length < 100) { // 避免显示过长的HTML错误页面
+              if (errorText.length < 100) {
+                // 避免显示过长的HTML错误页面
                 errorMessage = errorText;
               }
             }
