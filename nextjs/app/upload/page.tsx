@@ -4,7 +4,9 @@ import { useState } from "react";
 import type { NextPage } from "next";
 import { DocumentArrowUpIcon, HashtagIcon } from "@heroicons/react/24/outline";
 import { FileUpload } from "~~/components/ui/file-upload";
-import { calculateSHA256, formatFileSize, copyToClipboard } from "~~/lib/utils";
+import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { calculateSHA256, copyToClipboard, formatFileSize } from "~~/lib/utils";
+import { notification } from "~~/utils/scaffold-eth";
 
 interface FileInfo {
   file: File;
@@ -13,10 +15,28 @@ interface FileInfo {
   error?: string;
 }
 
+interface SubmissionResult {
+  evidenceId: string;
+  transactionHash: string;
+}
+
 const Upload: NextPage = () => {
   const [activeTab, setActiveTab] = useState("file");
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
   const [copied, setCopied] = useState(false);
+  const [fileDescription, setFileDescription] = useState("");
+  const [hashInput, setHashInput] = useState("");
+  const [hashDescription, setHashDescription] = useState("");
+  const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { writeContractAsync: submitEvidence, isMining: isSubmittingEvidence } = useScaffoldWriteContract({
+    contractName: "EvidenceStorage",
+  });
+
+  const { writeContractAsync: submitHashEvidence, isMining: isSubmittingHashEvidence } = useScaffoldWriteContract({
+    contractName: "EvidenceStorage",
+  });
 
   const handleFileUpload = async (files: File[]) => {
     if (files.length === 0) return;
@@ -48,11 +68,108 @@ const Upload: NextPage = () => {
 
   const handleCopyHash = async () => {
     if (!fileInfo?.hash) return;
-    
+
     const success = await copyToClipboard(fileInfo.hash);
     if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleSubmitFileEvidence = async () => {
+    if (!fileInfo?.hash || fileInfo.isLoading || fileInfo.error) {
+      notification.error("请先上传文件并等待哈希计算完成");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      // Convert hex hash to bytes32 format
+      const hashBytes32 = `0x${fileInfo.hash}` as `0x${string}`;
+
+      // Prepare file metadata struct
+      const metadata = {
+        fileName: fileInfo.file.name,
+        mimeType: fileInfo.file.type || "",
+        size: BigInt(fileInfo.file.size),
+        creationTime: BigInt(fileInfo.file.lastModified),
+      };
+
+      // Prepare hash info struct
+      const hashInfo = {
+        algorithm: "SHA256",
+        value: hashBytes32,
+      };
+
+      const result = await submitEvidence({
+        functionName: "submitEvidence",
+        args: [metadata, hashInfo, fileDescription],
+      });
+
+      if (result) {
+        setSubmissionResult({
+          evidenceId: "", // Will be retrieved from transaction receipt
+          transactionHash: result,
+        });
+        notification.success("存证提交成功!");
+        // Reset form
+        setFileInfo(null);
+        setFileDescription("");
+      }
+    } catch (error: any) {
+      console.error("Submit evidence error:", error);
+      notification.error(`存证提交失败: ${error.message || "未知错误"}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmitHashOnly = async () => {
+    if (!hashInput.trim()) {
+      notification.error("请输入哈希值");
+      return;
+    }
+
+    // Validate hash format (64 character hex string)
+    const hashRegex = /^[a-fA-F0-9]{64}$/;
+    if (!hashRegex.test(hashInput.trim())) {
+      notification.error("请输入有效的64位SHA256哈希值");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      // Convert hex hash to bytes32 format
+      const hashBytes32 = `0x${hashInput.trim()}` as `0x${string}`;
+
+      // Prepare hash info struct
+      const hashInfo = {
+        algorithm: "SHA256",
+        value: hashBytes32,
+      };
+
+      const result = await submitHashEvidence({
+        functionName: "submitHashEvidence",
+        args: [hashDescription || "用户提交的哈希存证", hashInfo, hashDescription],
+      });
+
+      if (result) {
+        setSubmissionResult({
+          evidenceId: "", // Will be retrieved from transaction receipt
+          transactionHash: result,
+        });
+        notification.success("哈希存证提交成功!");
+        // Reset form
+        setHashInput("");
+        setHashDescription("");
+      }
+    } catch (error: any) {
+      console.error("Submit hash evidence error:", error);
+      notification.error(`哈希存证提交失败: ${error.message || "未知错误"}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -62,6 +179,24 @@ const Upload: NextPage = () => {
         <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">创建您的数字存证</h1>
         <p className="mt-3 text-lg text-gray-600">安全、快速地将您的重要文件或数据哈希上链</p>
       </div>
+
+      {submissionResult && (
+        <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
+          <h3 className="font-semibold text-green-800 mb-3">存证提交成功!</h3>
+          <div className="space-y-2 text-sm">
+            <div>
+              <span className="text-green-600">交易哈希:</span>
+              <p className="font-mono text-xs break-all">{submissionResult.transactionHash}</p>
+            </div>
+            {submissionResult.evidenceId && (
+              <div>
+                <span className="text-green-600">存证ID:</span>
+                <p className="font-medium">{submissionResult.evidenceId}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="mt-12">
         <div className="tabs tabs-boxed bg-base-200 p-2 rounded-lg justify-center">
@@ -178,13 +313,30 @@ const Upload: NextPage = () => {
                   </label>
                   <textarea
                     id="file-description"
+                    value={fileDescription}
+                    onChange={e => setFileDescription(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mt-1"
                     placeholder="例如: 2023年第四季度财务报表"
                     rows={3}
                   ></textarea>
                 </div>
                 <div className="card-actions justify-end">
-                  <button className="btn btn-primary btn-lg">提交存证</button>
+                  <button
+                    className="btn btn-primary btn-lg"
+                    onClick={handleSubmitFileEvidence}
+                    disabled={
+                      isSubmitting || isSubmittingEvidence || !fileInfo?.hash || fileInfo.isLoading || !!fileInfo.error
+                    }
+                  >
+                    {isSubmitting || isSubmittingEvidence ? (
+                      <>
+                        <span className="loading loading-spinner loading-sm"></span>
+                        提交中...
+                      </>
+                    ) : (
+                      "提交存证"
+                    )}
+                  </button>
                 </div>
               </div>
             )}
@@ -202,8 +354,11 @@ const Upload: NextPage = () => {
                   <input
                     id="hash-input"
                     type="text"
+                    value={hashInput}
+                    onChange={e => setHashInput(e.target.value)}
                     placeholder="请输入 64 位的 SHA256 哈希值"
                     className="input input-bordered w-full mt-1 font-mono"
+                    maxLength={64}
                   />
                 </div>
                 <div className="form-control">
@@ -212,13 +367,28 @@ const Upload: NextPage = () => {
                   </label>
                   <textarea
                     id="hash-description"
+                    value={hashDescription}
+                    onChange={e => setHashDescription(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mt-1"
                     placeholder="例如: 原始文件名或相关业务编号"
                     rows={3}
                   ></textarea>
                 </div>
                 <div className="card-actions justify-end">
-                  <button className="btn btn-primary btn-lg">提交存证</button>
+                  <button
+                    className="btn btn-primary btn-lg"
+                    onClick={handleSubmitHashOnly}
+                    disabled={isSubmitting || isSubmittingHashEvidence || !hashInput.trim()}
+                  >
+                    {isSubmitting || isSubmittingHashEvidence ? (
+                      <>
+                        <span className="loading loading-spinner loading-sm"></span>
+                        提交中...
+                      </>
+                    ) : (
+                      "提交存证"
+                    )}
+                  </button>
                 </div>
               </div>
             )}

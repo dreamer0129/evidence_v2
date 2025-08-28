@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     EvidenceStorage: {
-      address: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+      address: "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
       abi: [
         {
           inputs: [
@@ -392,6 +392,11 @@ const deployedContracts = {
                   type: "string",
                 },
                 {
+                  internalType: "string",
+                  name: "memo",
+                  type: "string",
+                },
+                {
                   internalType: "bool",
                   name: "exists",
                   type: "bool",
@@ -484,6 +489,11 @@ const deployedContracts = {
                 {
                   internalType: "string",
                   name: "status",
+                  type: "string",
+                },
+                {
+                  internalType: "string",
+                  name: "memo",
                   type: "string",
                 },
                 {
@@ -611,6 +621,11 @@ const deployedContracts = {
               name: "hash",
               type: "tuple",
             },
+            {
+              internalType: "string",
+              name: "memo",
+              type: "string",
+            },
           ],
           name: "submitEvidence",
           outputs: [
@@ -646,6 +661,11 @@ const deployedContracts = {
               internalType: "struct EvidenceStorage.HashInfo",
               name: "hash",
               type: "tuple",
+            },
+            {
+              internalType: "string",
+              name: "memo",
+              type: "string",
             },
           ],
           name: "submitHashEvidence",
@@ -716,7 +736,7 @@ const deployedContracts = {
         renounceOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
       },
-      deployedOnBlock: 6,
+      deployedOnBlock: 9,
     },
     YourContract: {
       address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
