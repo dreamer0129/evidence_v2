@@ -14,6 +14,7 @@ describe("EvidenceStorage", function () {
   let testEvidenceId2: string;
   const testHash = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
   const testHash2 = "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890";
+  const testMemo = "This is a test memo.";
 
   const testMetadata = {
     fileName: "test-document.pdf",
@@ -52,7 +53,7 @@ describe("EvidenceStorage", function () {
   describe("Evidence Submission", function () {
     it("Should submit evidence successfully", async function () {
       // Execute the transaction
-      const tx = await evidenceStorage.connect(user1).submitEvidence(testMetadata, testHashInfo);
+      const tx = await evidenceStorage.connect(user1).submitEvidence(testMetadata, testHashInfo, testMemo);
 
       // Verify event was emitted
       await expect(tx).to.emit(evidenceStorage, "EvidenceSubmitted");
@@ -70,7 +71,7 @@ describe("EvidenceStorage", function () {
 
     it("Should submit hash-only evidence successfully", async function () {
       // Execute the transaction
-      const tx = await evidenceStorage.connect(user2).submitHashEvidence("secret-file.txt", testHashInfo2);
+      const tx = await evidenceStorage.connect(user2).submitHashEvidence("secret-file.txt", testHashInfo2, "Hash only memo");
 
       // Verify event was emitted
       await expect(tx).to.emit(evidenceStorage, "EvidenceSubmitted");
@@ -92,7 +93,7 @@ describe("EvidenceStorage", function () {
       };
 
       // Execute the actual transaction
-      const tx = await evidenceStorage.connect(user1).submitEvidence(testMetadata, uniqueHashInfo);
+      const tx = await evidenceStorage.connect(user1).submitEvidence(testMetadata, uniqueHashInfo, "Another memo");
 
       // Get the evidence ID by checking which evidences this user now has
       const userEvidences = await evidenceStorage.getUserEvidences(user1.address);
@@ -108,7 +109,7 @@ describe("EvidenceStorage", function () {
 
     it("Should revert when submitting duplicate hash", async function () {
       await expect(
-        evidenceStorage.connect(user2).submitEvidence(testMetadata, testHashInfo),
+        evidenceStorage.connect(user2).submitEvidence(testMetadata, testHashInfo, "Duplicate hash memo"),
       ).to.be.revertedWithCustomError(evidenceStorage, "HashAlreadyExists");
     });
 
@@ -127,7 +128,7 @@ describe("EvidenceStorage", function () {
       };
 
       await expect(
-        evidenceStorage.connect(user1).submitEvidence(invalidMetadata, uniqueHashInfo),
+        evidenceStorage.connect(user1).submitEvidence(invalidMetadata, uniqueHashInfo, "Invalid file name memo"),
       ).to.be.revertedWithCustomError(evidenceStorage, "InvalidFileMetadata");
     });
 
@@ -138,7 +139,7 @@ describe("EvidenceStorage", function () {
       };
 
       await expect(
-        evidenceStorage.connect(user1).submitEvidence(testMetadata, invalidHashInfo),
+        evidenceStorage.connect(user1).submitEvidence(testMetadata, invalidHashInfo, "Invalid hash memo"),
       ).to.be.revertedWithCustomError(evidenceStorage, "InvalidHashValue");
     });
   });
@@ -153,6 +154,7 @@ describe("EvidenceStorage", function () {
       expect(evidence.hash.algorithm).to.equal(testHashInfo.algorithm);
       expect(evidence.hash.value).to.equal(testHashInfo.value);
       expect(evidence.status).to.equal("effective");
+      expect(evidence.memo).to.equal(testMemo);
       expect(evidence.exists).to.be.true;
     });
 
@@ -275,7 +277,7 @@ describe("EvidenceStorage", function () {
       };
 
       // Execute the actual transaction
-      const tx = await evidenceStorage.connect(user1).submitEvidence(testMetadata, newHashInfo);
+      const tx = await evidenceStorage.connect(user1).submitEvidence(testMetadata, newHashInfo, "Unauthorized revoke memo");
 
       // Get the evidence ID by checking the latest evidence for this user
       const userEvidences = await evidenceStorage.getUserEvidences(user1.address);

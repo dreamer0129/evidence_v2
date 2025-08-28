@@ -35,6 +35,7 @@ contract EvidenceStorage is Ownable, ReentrancyGuard {
         uint256 timestamp; // Evidence submission timestamp
         uint256 blockHeight; // Block height when submitted
         string status; // "effective", "expired", "revoked"
+        string memo; // Additional user-provided memo
         bool exists; // Check if evidence exists
     }
 
@@ -109,11 +110,13 @@ contract EvidenceStorage is Ownable, ReentrancyGuard {
      * Submit evidence with complete file metadata
      * @param metadata File metadata including name, type, size, creation time
      * @param hash Hash information including algorithm and value
+     * @param memo Additional user-provided memo
      * @return evidenceId The generated evidence identifier
      */
     function submitEvidence(
         FileMetadata memory metadata,
-        HashInfo memory hash
+        HashInfo memory hash,
+        string memory memo
     ) external nonReentrant validHash(hash.value) returns (string memory evidenceId) {
         // Check if hash already exists
         if (bytes(hashToEvidenceId[hash.value]).length > 0) {
@@ -137,6 +140,7 @@ contract EvidenceStorage is Ownable, ReentrancyGuard {
             timestamp: block.timestamp,
             blockHeight: block.number,
             status: "effective",
+            memo: memo,
             exists: true
         });
 
@@ -155,13 +159,15 @@ contract EvidenceStorage is Ownable, ReentrancyGuard {
 
     /**
      * Submit evidence with only hash information (for privacy protection)
-     * @param evidenceId Unique evidence identifier
      * @param fileName Basic file name
      * @param hash Hash information
+     * @param memo Additional user-provided memo
+     * @return evidenceId The generated evidence identifier
      */
     function submitHashEvidence(
         string memory fileName,
-        HashInfo memory hash
+        HashInfo memory hash,
+        string memory memo
     ) external nonReentrant validHash(hash.value) returns (string memory evidenceId) {
         // Check if hash already exists
         if (bytes(hashToEvidenceId[hash.value]).length > 0) {
@@ -188,6 +194,7 @@ contract EvidenceStorage is Ownable, ReentrancyGuard {
             timestamp: block.timestamp,
             blockHeight: block.number,
             status: "effective",
+            memo: memo,
             exists: true
         });
 
