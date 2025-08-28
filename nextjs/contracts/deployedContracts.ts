@@ -6,6 +6,718 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 
 const deployedContracts = {
   31337: {
+    EvidenceStorage: {
+      address: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+      abi: [
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "_owner",
+              type: "address",
+            },
+          ],
+          stateMutability: "nonpayable",
+          type: "constructor",
+        },
+        {
+          inputs: [
+            {
+              internalType: "string",
+              name: "evidenceId",
+              type: "string",
+            },
+          ],
+          name: "EvidenceAlreadyExists",
+          type: "error",
+        },
+        {
+          inputs: [
+            {
+              internalType: "string",
+              name: "evidenceId",
+              type: "string",
+            },
+          ],
+          name: "EvidenceNotFound",
+          type: "error",
+        },
+        {
+          inputs: [
+            {
+              internalType: "bytes32",
+              name: "hashValue",
+              type: "bytes32",
+            },
+          ],
+          name: "HashAlreadyExists",
+          type: "error",
+        },
+        {
+          inputs: [
+            {
+              internalType: "string",
+              name: "evidenceId",
+              type: "string",
+            },
+          ],
+          name: "InvalidEvidenceId",
+          type: "error",
+        },
+        {
+          inputs: [],
+          name: "InvalidFileMetadata",
+          type: "error",
+        },
+        {
+          inputs: [],
+          name: "InvalidHashValue",
+          type: "error",
+        },
+        {
+          inputs: [
+            {
+              internalType: "string",
+              name: "status",
+              type: "string",
+            },
+          ],
+          name: "InvalidStatus",
+          type: "error",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "owner",
+              type: "address",
+            },
+          ],
+          name: "OwnableInvalidOwner",
+          type: "error",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "account",
+              type: "address",
+            },
+          ],
+          name: "OwnableUnauthorizedAccount",
+          type: "error",
+        },
+        {
+          inputs: [],
+          name: "ReentrancyGuardReentrantCall",
+          type: "error",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "caller",
+              type: "address",
+            },
+          ],
+          name: "UnauthorizedAccess",
+          type: "error",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "string",
+              name: "evidenceId",
+              type: "string",
+            },
+            {
+              indexed: true,
+              internalType: "address",
+              name: "revoker",
+              type: "address",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "timestamp",
+              type: "uint256",
+            },
+          ],
+          name: "EvidenceRevoked",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "string",
+              name: "evidenceId",
+              type: "string",
+            },
+            {
+              indexed: false,
+              internalType: "string",
+              name: "oldStatus",
+              type: "string",
+            },
+            {
+              indexed: false,
+              internalType: "string",
+              name: "newStatus",
+              type: "string",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "timestamp",
+              type: "uint256",
+            },
+          ],
+          name: "EvidenceStatusChanged",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "string",
+              name: "evidenceId",
+              type: "string",
+            },
+            {
+              indexed: true,
+              internalType: "address",
+              name: "user",
+              type: "address",
+            },
+            {
+              indexed: true,
+              internalType: "bytes32",
+              name: "hashValue",
+              type: "bytes32",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "timestamp",
+              type: "uint256",
+            },
+          ],
+          name: "EvidenceSubmitted",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "string",
+              name: "evidenceId",
+              type: "string",
+            },
+            {
+              indexed: false,
+              internalType: "bool",
+              name: "isValid",
+              type: "bool",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "timestamp",
+              type: "uint256",
+            },
+          ],
+          name: "EvidenceVerified",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "address",
+              name: "previousOwner",
+              type: "address",
+            },
+            {
+              indexed: true,
+              internalType: "address",
+              name: "newOwner",
+              type: "address",
+            },
+          ],
+          name: "OwnershipTransferred",
+          type: "event",
+        },
+        {
+          inputs: [
+            {
+              internalType: "string",
+              name: "evidenceId",
+              type: "string",
+            },
+            {
+              internalType: "string",
+              name: "newStatus",
+              type: "string",
+            },
+          ],
+          name: "changeEvidenceStatus",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "string",
+              name: "evidenceId",
+              type: "string",
+            },
+          ],
+          name: "doesEvidenceExist",
+          outputs: [
+            {
+              internalType: "bool",
+              name: "exists",
+              type: "bool",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "bytes32",
+              name: "hashValue",
+              type: "bytes32",
+            },
+          ],
+          name: "doesHashExist",
+          outputs: [
+            {
+              internalType: "bool",
+              name: "exists",
+              type: "bool",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "string",
+              name: "evidenceId",
+              type: "string",
+            },
+          ],
+          name: "getEvidence",
+          outputs: [
+            {
+              components: [
+                {
+                  internalType: "string",
+                  name: "evidenceId",
+                  type: "string",
+                },
+                {
+                  internalType: "address",
+                  name: "userId",
+                  type: "address",
+                },
+                {
+                  components: [
+                    {
+                      internalType: "string",
+                      name: "fileName",
+                      type: "string",
+                    },
+                    {
+                      internalType: "string",
+                      name: "mimeType",
+                      type: "string",
+                    },
+                    {
+                      internalType: "uint256",
+                      name: "size",
+                      type: "uint256",
+                    },
+                    {
+                      internalType: "uint256",
+                      name: "creationTime",
+                      type: "uint256",
+                    },
+                  ],
+                  internalType: "struct EvidenceStorage.FileMetadata",
+                  name: "metadata",
+                  type: "tuple",
+                },
+                {
+                  components: [
+                    {
+                      internalType: "string",
+                      name: "algorithm",
+                      type: "string",
+                    },
+                    {
+                      internalType: "bytes32",
+                      name: "value",
+                      type: "bytes32",
+                    },
+                  ],
+                  internalType: "struct EvidenceStorage.HashInfo",
+                  name: "hash",
+                  type: "tuple",
+                },
+                {
+                  internalType: "uint256",
+                  name: "timestamp",
+                  type: "uint256",
+                },
+                {
+                  internalType: "uint256",
+                  name: "blockHeight",
+                  type: "uint256",
+                },
+                {
+                  internalType: "string",
+                  name: "status",
+                  type: "string",
+                },
+                {
+                  internalType: "bool",
+                  name: "exists",
+                  type: "bool",
+                },
+              ],
+              internalType: "struct EvidenceStorage.Evidence",
+              name: "",
+              type: "tuple",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "bytes32",
+              name: "hashValue",
+              type: "bytes32",
+            },
+          ],
+          name: "getEvidenceByHash",
+          outputs: [
+            {
+              components: [
+                {
+                  internalType: "string",
+                  name: "evidenceId",
+                  type: "string",
+                },
+                {
+                  internalType: "address",
+                  name: "userId",
+                  type: "address",
+                },
+                {
+                  components: [
+                    {
+                      internalType: "string",
+                      name: "fileName",
+                      type: "string",
+                    },
+                    {
+                      internalType: "string",
+                      name: "mimeType",
+                      type: "string",
+                    },
+                    {
+                      internalType: "uint256",
+                      name: "size",
+                      type: "uint256",
+                    },
+                    {
+                      internalType: "uint256",
+                      name: "creationTime",
+                      type: "uint256",
+                    },
+                  ],
+                  internalType: "struct EvidenceStorage.FileMetadata",
+                  name: "metadata",
+                  type: "tuple",
+                },
+                {
+                  components: [
+                    {
+                      internalType: "string",
+                      name: "algorithm",
+                      type: "string",
+                    },
+                    {
+                      internalType: "bytes32",
+                      name: "value",
+                      type: "bytes32",
+                    },
+                  ],
+                  internalType: "struct EvidenceStorage.HashInfo",
+                  name: "hash",
+                  type: "tuple",
+                },
+                {
+                  internalType: "uint256",
+                  name: "timestamp",
+                  type: "uint256",
+                },
+                {
+                  internalType: "uint256",
+                  name: "blockHeight",
+                  type: "uint256",
+                },
+                {
+                  internalType: "string",
+                  name: "status",
+                  type: "string",
+                },
+                {
+                  internalType: "bool",
+                  name: "exists",
+                  type: "bool",
+                },
+              ],
+              internalType: "struct EvidenceStorage.Evidence",
+              name: "",
+              type: "tuple",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "getTotalEvidenceCount",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "user",
+              type: "address",
+            },
+          ],
+          name: "getUserEvidences",
+          outputs: [
+            {
+              internalType: "string[]",
+              name: "",
+              type: "string[]",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "owner",
+          outputs: [
+            {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "renounceOwnership",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "string",
+              name: "evidenceId",
+              type: "string",
+            },
+          ],
+          name: "revokeEvidence",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              components: [
+                {
+                  internalType: "string",
+                  name: "fileName",
+                  type: "string",
+                },
+                {
+                  internalType: "string",
+                  name: "mimeType",
+                  type: "string",
+                },
+                {
+                  internalType: "uint256",
+                  name: "size",
+                  type: "uint256",
+                },
+                {
+                  internalType: "uint256",
+                  name: "creationTime",
+                  type: "uint256",
+                },
+              ],
+              internalType: "struct EvidenceStorage.FileMetadata",
+              name: "metadata",
+              type: "tuple",
+            },
+            {
+              components: [
+                {
+                  internalType: "string",
+                  name: "algorithm",
+                  type: "string",
+                },
+                {
+                  internalType: "bytes32",
+                  name: "value",
+                  type: "bytes32",
+                },
+              ],
+              internalType: "struct EvidenceStorage.HashInfo",
+              name: "hash",
+              type: "tuple",
+            },
+          ],
+          name: "submitEvidence",
+          outputs: [
+            {
+              internalType: "string",
+              name: "evidenceId",
+              type: "string",
+            },
+          ],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "string",
+              name: "fileName",
+              type: "string",
+            },
+            {
+              components: [
+                {
+                  internalType: "string",
+                  name: "algorithm",
+                  type: "string",
+                },
+                {
+                  internalType: "bytes32",
+                  name: "value",
+                  type: "bytes32",
+                },
+              ],
+              internalType: "struct EvidenceStorage.HashInfo",
+              name: "hash",
+              type: "tuple",
+            },
+          ],
+          name: "submitHashEvidence",
+          outputs: [
+            {
+              internalType: "string",
+              name: "evidenceId",
+              type: "string",
+            },
+          ],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "newOwner",
+              type: "address",
+            },
+          ],
+          name: "transferOwnership",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "string",
+              name: "evidenceId",
+              type: "string",
+            },
+          ],
+          name: "verifyEvidence",
+          outputs: [
+            {
+              internalType: "bool",
+              name: "isValid",
+              type: "bool",
+            },
+          ],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "bytes32",
+              name: "hashValue",
+              type: "bytes32",
+            },
+          ],
+          name: "verifyEvidenceByHash",
+          outputs: [
+            {
+              internalType: "bool",
+              name: "isValid",
+              type: "bool",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+      ],
+      inheritedFunctions: {
+        owner: "@openzeppelin/contracts/access/Ownable.sol",
+        renounceOwnership: "@openzeppelin/contracts/access/Ownable.sol",
+        transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
+      },
+      deployedOnBlock: 6,
+    },
     YourContract: {
       address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
       abi: [
