@@ -3470,6 +3470,7 @@ __metadata:
     react: ~19.0.0
     react-dom: ~19.0.0
     react-hot-toast: ~2.4.0
+    simplex-noise: ^4.0.3
     tailwind-merge: ^3.3.1
     tailwindcss: 4.1.3
     tw-animate-css: ^1.3.7
@@ -15161,6 +15162,13 @@ __metadata:
   dependencies:
     is-arrayish: ^0.3.1
   checksum: a7f3f2ab5c76c4472d5c578df892e857323e452d9f392e1b5cf74b74db66e6294a1e1b8b390b519fa1b96b5b613f2a37db6cffef52c3f1f8f3c5ea64eb2d54c0
+  languageName: node
+  linkType: hard
+
+"simplex-noise@npm:^4.0.3":
+  version: 4.0.3
+  resolution: "simplex-noise@npm:4.0.3"
+  checksum: b47720a540695947cd60b0571b4427b68392b1c75e76e27278e3c1b7ea13301d46d60fe9a81ff6a42b1048f2548c9c6687630b984ec0b59d7ab4e79969052462
   languageName: node
   linkType: hard
 
