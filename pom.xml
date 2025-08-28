@@ -218,7 +218,9 @@
 							<include>**/*.sol</include>
 						</includes>
 					</soliditySourceFiles>
-
+					<pathPrefixes>
+						<pathPrefix>@openzeppelin=../node_modules/@openzeppelin</pathPrefix>
+					</pathPrefixes>
 				</configuration>
 			</plugin>
 		</plugins>
