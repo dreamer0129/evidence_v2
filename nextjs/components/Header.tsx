@@ -2,7 +2,6 @@
 
 import React, { useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { hardhat } from "viem/chains";
 import {
   ArrowUpTrayIcon,
@@ -10,10 +9,14 @@ import {
   BugAntIcon,
   CheckBadgeIcon,
   ClockIcon,
-  DocumentTextIcon,
   HomeIcon,
+  MagnifyingGlassIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
+import { AdaptiveBackground } from "~~/components/AdaptiveBackground";
+import { AdaptiveNavLink } from "~~/components/AdaptiveNavLink";
+import { AdaptiveText } from "~~/components/AdaptiveText";
+import { ToolsDropdown } from "~~/components/ToolsDropdown";
 import { MobileWalletConnection } from "~~/components/MobileWalletConnection";
 import { UserDropdown } from "~~/components/UserDropdown";
 import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
@@ -47,41 +50,16 @@ export const menuLinks: HeaderMenuLink[] = [
     href: "/history",
     icon: <ClockIcon className="h-4 w-4" />,
   },
-  {
-    label: "文档",
-    href: "/docs",
-    icon: <DocumentTextIcon className="h-4 w-4" />,
-  },
-  {
-    label: "Debug",
-    href: "/debug",
-    icon: <BugAntIcon className="h-4 w-4" />,
-  },
 ];
 
 export const HeaderMenuLinks = () => {
-  const pathname = usePathname();
-
   return (
     <>
-      {menuLinks.map(({ label, href, icon }) => {
-        const isActive = pathname === href;
-        return (
-          <li key={href}>
-            <Link
-              href={href}
-              className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                isActive
-                  ? "bg-white/10 text-white border border-white/20"
-                  : "text-gray-300 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              {icon}
-              <span className="ml-3">{label}</span>
-            </Link>
-          </li>
-        );
-      })}
+      {menuLinks.map(({ label, href, icon }) => (
+        <li key={href} className="list-none">
+          <AdaptiveNavLink href={href} icon={icon} label={label} />
+        </li>
+      ))}
     </>
   );
 };
@@ -107,8 +85,9 @@ export const Header = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
-      {/* 背景模糊效果 */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-md border-b border-white/10" />
+      <AdaptiveBackground variant="header" className="absolute inset-0">
+        <div className="h-full" />
+      </AdaptiveBackground>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
@@ -119,8 +98,12 @@ export const Header = () => {
                 <HomeIcon className="w-5 h-5 text-white" />
               </div>
               <div>
-                <span className="text-white font-bold text-lg">EvidenceChain</span>
-                <span className="text-xs text-gray-400 block">区块链存证系统</span>
+                <AdaptiveText variant="primary" className="font-bold text-lg">
+                  EvidenceChain
+                </AdaptiveText>
+                <AdaptiveText variant="muted" className="text-xs block">
+                  区块链存证系统
+                </AdaptiveText>
               </div>
             </Link>
           </div>
@@ -134,6 +117,9 @@ export const Header = () => {
 
           {/* Right side actions */}
           <div className="flex items-center space-x-2 flex-shrink-0">
+            {/* Tools Dropdown */}
+            <ToolsDropdown />
+
             {/* User Dropdown */}
             <UserDropdown username={user.username} onLogout={logout} />
 
@@ -142,19 +128,14 @@ export const Header = () => {
               <RainbowKitCustomConnectButton />
             </div>
 
-            {/* Network Tools */}
-            {isLocalNetwork && (
-              <div className="hidden lg:block">
-                <FaucetButton />
-              </div>
-            )}
-
             {/* Mobile menu button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+              className="md:hidden p-2 rounded-lg transition-colors"
             >
-              {isMobileMenuOpen ? <XMarkIcon className="w-5 h-5" /> : <Bars3Icon className="w-5 h-5" />}
+              <AdaptiveText variant="secondary">
+                {isMobileMenuOpen ? <XMarkIcon className="w-5 h-5" /> : <Bars3Icon className="w-5 h-5" />}
+              </AdaptiveText>
             </button>
           </div>
         </div>
@@ -164,25 +145,47 @@ export const Header = () => {
       {isMobileMenuOpen && (
         <div
           ref={mobileMenuRef}
-          className="md:hidden absolute top-16 left-0 right-0 bg-black/90 backdrop-blur-md border-t border-white/10"
+          className="md:hidden absolute top-16 left-0 right-0"
         >
+          <AdaptiveBackground variant="header" className="absolute inset-0">
+            <div className="h-full" />
+          </AdaptiveBackground>
           <div className="px-4 py-2 space-y-1">
             <HeaderMenuLinks />
 
-            {/* Mobile Wallet Connection */}
-            <div className="border-t border-white/10 pt-4 mt-4">
-              <div className="text-xs text-gray-400 mb-2">钱包连接</div>
-              <MobileWalletConnection />
+            {/* Mobile Tools */}
+            <div className="border-t border-gray-200 pt-4 mt-4">
+              <AdaptiveText variant="muted" className="text-xs mb-2">工具</AdaptiveText>
+              <div className="space-y-2">
+                {/* Mobile Faucet */}
+                {isLocalNetwork && (
+                  <div className="flex items-center justify-between">
+                    <AdaptiveText variant="secondary" className="text-sm">Faucet</AdaptiveText>
+                    <FaucetButton />
+                  </div>
+                )}
+                
+                {/* Mobile Block Explorer */}
+                <Link
+                  href="/blockexplorer"
+                  className="flex items-center justify-between text-sm hover:bg-gray-100 rounded px-2 py-1 transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <AdaptiveText variant="secondary" className="flex items-center">
+                    <MagnifyingGlassIcon className="w-4 h-4 mr-2" />
+                    <span>Block Explorer</span>
+                  </AdaptiveText>
+                </Link>
+              </div>
             </div>
 
-            {/* Mobile Network Tools */}
-            {isLocalNetwork && (
-              <div className="border-t border-white/10 pt-4 mt-4">
-                <div className="flex justify-center">
-                  <FaucetButton />
-                </div>
-              </div>
-            )}
+            {/* Mobile Wallet Connection */}
+            <div className="border-t border-gray-200 pt-4 mt-4">
+              <AdaptiveText variant="muted" className="text-xs mb-2">
+                钱包连接
+              </AdaptiveText>
+              <MobileWalletConnection />
+            </div>
           </div>
         </div>
       )}

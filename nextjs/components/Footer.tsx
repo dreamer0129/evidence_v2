@@ -2,7 +2,8 @@ import React from "react";
 import Link from "next/link";
 import { hardhat } from "viem/chains";
 import { CurrencyDollarIcon, MagnifyingGlassIcon, SparklesIcon } from "@heroicons/react/24/outline";
-import { SwitchTheme } from "~~/components/SwitchTheme";
+import { AdaptiveBackground } from "~~/components/AdaptiveBackground";
+import { AdaptiveText } from "~~/components/AdaptiveText";
 import { Faucet } from "~~/components/scaffold-eth";
 import { useAuth } from "~~/contexts/AuthContext";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
@@ -27,7 +28,9 @@ export const Footer = () => {
       {/* 主要底部工具栏 */}
       <div className="fixed bottom-0 left-0 right-0 z-40">
         {/* 背景模糊效果 */}
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-md border-t border-white/10" />
+        <AdaptiveBackground variant="footer" className="absolute inset-0">
+          <div className="h-full" />
+        </AdaptiveBackground>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
@@ -37,7 +40,7 @@ export const Footer = () => {
               {nativeCurrencyPrice > 0 && (
                 <div className="hidden sm:flex items-center px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
                   <CurrencyDollarIcon className="w-4 h-4 text-green-400 mr-2" />
-                  <span className="text-sm text-gray-300">{nativeCurrencyPrice.toFixed(2)}</span>
+                  <AdaptiveText variant="secondary" className="text-sm">{nativeCurrencyPrice.toFixed(2)}</AdaptiveText>
                 </div>
               )}
 
@@ -47,10 +50,12 @@ export const Footer = () => {
                   <Faucet />
                   <Link
                     href="/blockexplorer"
-                    className="flex items-center px-3 py-1.5 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 border border-white/10 transition-all duration-200"
+                    className="flex items-center px-3 py-1.5 rounded-lg text-sm hover:bg-white/5 border border-white/10 transition-all duration-200"
                   >
-                    <MagnifyingGlassIcon className="w-4 h-4 mr-2" />
-                    <span>Block Explorer</span>
+                    <AdaptiveText variant="secondary" className="flex items-center">
+                      <MagnifyingGlassIcon className="w-4 h-4 mr-2" />
+                      <span>Block Explorer</span>
+                    </AdaptiveText>
                   </Link>
                 </div>
               )}
@@ -58,20 +63,17 @@ export const Footer = () => {
 
             {/* 右侧工具 */}
             <div className="flex items-center space-x-3">
-              {/* 主题切换 */}
-              <div className="flex items-center px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                <SwitchTheme className="flex items-center space-x-2" />
-              </div>
-
               {/* 快速操作 */}
               {user && (
                 <div className="hidden lg:flex items-center space-x-2">
                   <Link
                     href="/upload"
-                    className="flex items-center px-3 py-1.5 rounded-lg text-sm text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 border border-blue-500/20 transition-all duration-200"
+                    className="flex items-center px-3 py-1.5 rounded-lg text-sm hover:bg-blue-500/10 border border-blue-500/20 transition-all duration-200"
                   >
-                    <SparklesIcon className="w-4 h-4 mr-2" />
-                    <span>快速存证</span>
+                    <AdaptiveText variant="secondary" className="flex items-center text-blue-400">
+                      <SparklesIcon className="w-4 h-4 mr-2" />
+                      <span>快速存证</span>
+                    </AdaptiveText>
                   </Link>
                 </div>
               )}

@@ -316,9 +316,7 @@ const Home: NextPage = () => {
           </div>
         </section>
 
-        {/* 为固定 Footer 留出空间 */}
-        {user && <div className="h-28" />}
-      </div>
+        </div>
 
       {/* Global styles for animations */}
       <style jsx global>{`
