@@ -37,43 +37,6 @@ const deployEvidenceStorage: DeployFunction = async function (hre: HardhatRuntim
   console.log("📋 EvidenceStorage deployed!");
   console.log("🔧 Owner address:", await evidenceStorage.owner());
   console.log("📊 Total evidence count:", await evidenceStorage.getTotalEvidenceCount());
-
-  // Optional: Submit a test evidence for verification
-  console.log("🧪 Submitting test evidence...");
-  try {
-    const testHash = {
-      algorithm: "SHA256",
-      value: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-    };
-    const testMetadata = {
-      fileName: "test-document.pdf",
-      mimeType: "application/pdf",
-      size: 12345,
-      creationTime: Math.floor(Date.now() / 1000),
-    };
-
-    const tx = await evidenceStorage.submitEvidence(testMetadata, testHash);
-    const receipt = await tx.wait();
-
-    // Get the generated evidence ID from events
-    const evidenceSubmittedEvent = evidenceStorage.interface.getEvent("EvidenceSubmitted");
-    const event = receipt.logs.find(
-      (log: any) =>
-        evidenceSubmittedEvent && log.topics[0] === evidenceStorage.interface.getEvent("EvidenceSubmitted")!.topicHash,
-    );
-    if (event && evidenceSubmittedEvent) {
-      const decodedEvent = evidenceStorage.interface.parseLog(event);
-      if (decodedEvent && decodedEvent.args) {
-        console.log("✅ Test evidence submitted successfully!");
-        console.log("🆔 Generated evidence ID:", decodedEvent.args.evidenceId);
-        console.log("📊 Total evidence count after test:", await evidenceStorage.getTotalEvidenceCount());
-      } else {
-        console.log("⚠️  Could not decode event or evidenceId not found.");
-      }
-    }
-  } catch (error) {
-    console.log("⚠️  Test evidence submission skipped (may already exist)");
-  }
 };
 
 export default deployEvidenceStorage;
