@@ -52,6 +52,10 @@ const config: HardhatUserConfig = {
         url: `https://eth-mainnet.alchemyapi.io/v2/${providerApiKey}`,
         enabled: process.env.MAINNET_FORKING_ENABLED === "true",
       },
+      mining: {
+        auto: true, // 启用自动挖矿
+        interval: 0, // 设置为0启用即时挖矿（每个交易立即打包）
+      },
     },
     mainnet: {
       url: "https://mainnet.rpc.buidlguidl.com",

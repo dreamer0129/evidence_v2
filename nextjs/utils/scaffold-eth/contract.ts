@@ -414,11 +414,56 @@ export const simulateContractWriteAndNotifyError = async ({
   chainId: AllowedChainIds;
 }) => {
   try {
+    console.log("🔍 [simulateContract] 开始模拟合约调用...");
+    console.log("📝 [simulateContract] 调用参数:", {
+      address: params.address,
+      functionName: params.functionName,
+      args: params.args,
+    });
+
+    const simulateStartTime = Date.now();
     await simulateContract(wagmiConfig, params);
+    const simulateEndTime = Date.now();
+
+    console.log(`✅ [simulateContract] 模拟调用成功, 耗时: ${simulateEndTime - simulateStartTime}ms`);
   } catch (error) {
+    const simulateEndTime = Date.now();
+    console.error(`❌ [simulateContract] 模拟调用失败, 耗时: ${simulateEndTime}ms`, error);
+
     const parsedError = getParsedErrorWithAllAbis(error, chainId);
+    console.error("📊 [simulateContract] 解析后的错误:", parsedError);
 
     notification.error(parsedError);
     throw error;
   }
+};
+
+/**
+ * 检测当前连接的钱包类型
+ * @param transactionTime 交易执行时间（毫秒）
+ * @returns 钱包类型标识
+ */
+export const detectWalletType = (transactionTime: number): string => {
+  if (transactionTime < 1000) {
+    return "burner"; // Local burner wallet
+  } else if (transactionTime < 5000) {
+    return "local"; // 其他本地钱包
+  } else if (transactionTime < 15000) {
+    return "external_fast"; // 快速外部钱包
+  } else {
+    return "external_slow"; // 慢速外部钱包（如MetaMask需要用户确认）
+  }
+};
+
+/**
+ * 获取钱包类型描述
+ */
+export const getWalletTypeDescription = (walletType: string): string => {
+  const descriptions: Record<string, string> = {
+    burner: "Local Burner Wallet (快速本地测试)",
+    local: "Local Wallet (本地钱包)",
+    external_fast: "External Wallet (外部钱包 - 快速)",
+    external_slow: "External Wallet (外部钱包 - 需要用户确认，如MetaMask)",
+  };
+  return descriptions[walletType] || "Unknown Wallet Type";
 };
