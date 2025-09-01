@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { hardhat } from "viem/chains";
 import {
-  ArrowRightOnRectangleIcon,
+  ArrowLeftStartOnRectangleIcon,
   ArrowUpTrayIcon,
   Bars3Icon,
   BugAntIcon,
@@ -109,7 +109,7 @@ export const Header = () => {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo and Brand */}
-          <div className="flex items-center">
+          <div className="flex items-center flex-shrink-0">
             <Link href="/" className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
                 <HomeIcon className="w-5 h-5 text-white" />
@@ -121,28 +121,30 @@ export const Header = () => {
             </Link>
           </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-1">
-            <HeaderMenuLinks />
-          </nav>
+          {/* Desktop Navigation - Center */}
+          <div className="hidden md:flex flex-1 justify-center">
+            <nav className="flex items-center space-x-1">
+              <HeaderMenuLinks />
+            </nav>
+          </div>
 
           {/* Right side actions */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3 flex-shrink-0">
             {/* User Authentication */}
             {user ? (
-              <div className="hidden sm:flex items-center space-x-3">
-                <div className="flex items-center space-x-2 text-sm text-gray-300">
+              <div className="hidden sm:flex items-center space-x-2">
+                <div className="flex items-center space-x-1.5 text-sm text-gray-300 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
                   <UserIcon className="w-4 h-4" />
-                  <span>{user.username}</span>
+                  <span className="max-w-20 truncate">{user.username}</span>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={logout}
-                  className="text-gray-300 hover:text-white hover:bg-white/10"
+                  className="text-gray-300 hover:text-white hover:bg-white/10 px-3"
                 >
-                  <ArrowRightOnRectangleIcon className="w-4 h-4 mr-1" />
-                  退出
+                  <ArrowLeftStartOnRectangleIcon className="w-4 h-4 mr-1" />
+                  <span className="hidden sm:inline">退出</span>
                 </Button>
               </div>
             ) : (
@@ -209,7 +211,7 @@ export const Header = () => {
                     onClick={logout}
                     className="text-gray-300 hover:text-white hover:bg-white/10"
                   >
-                    <ArrowRightOnRectangleIcon className="w-4 h-4 mr-1" />
+                    <ArrowLeftStartOnRectangleIcon className="w-4 h-4 mr-1" />
                     退出
                   </Button>
                 </div>
