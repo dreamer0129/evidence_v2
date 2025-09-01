@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { hardhat } from "viem/chains";
 import {
-  ArrowLeftStartOnRectangleIcon,
   ArrowUpTrayIcon,
   Bars3Icon,
   BugAntIcon,
@@ -13,11 +12,11 @@ import {
   ClockIcon,
   DocumentTextIcon,
   HomeIcon,
-  UserIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
+import { MobileWalletConnection } from "~~/components/MobileWalletConnection";
+import { UserDropdown } from "~~/components/UserDropdown";
 import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
-import { Button } from "~~/components/ui/button";
 import { useAuth } from "~~/contexts/AuthContext";
 import { useOutsideClick, useTargetNetwork } from "~~/hooks/scaffold-eth";
 
@@ -95,11 +94,16 @@ export const Header = () => {
   const isLocalNetwork = targetNetwork.id === hardhat.id;
   const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+
   useOutsideClick(mobileMenuRef, () => {
     setIsMobileMenuOpen(false);
   });
+
+  // 如果用户未登录，不渲染整个header
+  if (!user) {
+    return null;
+  }
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
@@ -129,41 +133,9 @@ export const Header = () => {
           </div>
 
           {/* Right side actions */}
-          <div className="flex items-center space-x-3 flex-shrink-0">
-            {/* User Authentication */}
-            {user ? (
-              <div className="hidden sm:flex items-center space-x-2">
-                <div className="flex items-center space-x-1.5 text-sm text-gray-300 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
-                  <UserIcon className="w-4 h-4" />
-                  <span className="max-w-20 truncate">{user.username}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={logout}
-                  className="text-gray-300 hover:text-white hover:bg-white/10 px-3"
-                >
-                  <ArrowLeftStartOnRectangleIcon className="w-4 h-4 mr-1" />
-                  <span className="hidden sm:inline">退出</span>
-                </Button>
-              </div>
-            ) : (
-              <div className="hidden sm:flex items-center space-x-2">
-                <Link href="/auth">
-                  <Button variant="ghost" size="sm" className="text-gray-300 hover:text-white hover:bg-white/10">
-                    登录
-                  </Button>
-                </Link>
-                <Link href="/auth">
-                  <Button
-                    size="sm"
-                    className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
-                  >
-                    注册
-                  </Button>
-                </Link>
-              </div>
-            )}
+          <div className="flex items-center space-x-2 flex-shrink-0">
+            {/* User Dropdown */}
+            <UserDropdown username={user.username} onLogout={logout} />
 
             {/* Wallet Connection */}
             <div className="hidden sm:block">
@@ -197,49 +169,10 @@ export const Header = () => {
           <div className="px-4 py-2 space-y-1">
             <HeaderMenuLinks />
 
-            {/* Mobile User Authentication */}
-            {user ? (
-              <div className="border-t border-white/10 pt-4 mt-4">
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center space-x-2 text-sm text-gray-300">
-                    <UserIcon className="w-4 h-4" />
-                    <span>{user.username}</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={logout}
-                    className="text-gray-300 hover:text-white hover:bg-white/10"
-                  >
-                    <ArrowLeftStartOnRectangleIcon className="w-4 h-4 mr-1" />
-                    退出
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="border-t border-white/10 pt-4 mt-4 space-y-2">
-                <Link href="/auth" onClick={() => setIsMobileMenuOpen(false)}>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start text-gray-300 hover:text-white hover:bg-white/10"
-                  >
-                    登录
-                  </Button>
-                </Link>
-                <Link href="/auth" onClick={() => setIsMobileMenuOpen(false)}>
-                  <Button className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600">
-                    注册
-                  </Button>
-                </Link>
-              </div>
-            )}
-
             {/* Mobile Wallet Connection */}
             <div className="border-t border-white/10 pt-4 mt-4">
               <div className="text-xs text-gray-400 mb-2">钱包连接</div>
-              <div className="flex justify-center">
-                <RainbowKitCustomConnectButton />
-              </div>
+              <MobileWalletConnection />
             </div>
 
             {/* Mobile Network Tools */}

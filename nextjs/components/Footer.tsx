@@ -17,6 +17,11 @@ export const Footer = () => {
   const isLocalNetwork = targetNetwork.id === hardhat.id;
   const { user } = useAuth();
 
+  // 如果用户未登录，不渲染整个footer
+  if (!user) {
+    return null;
+  }
+
   return (
     <>
       {/* 主要底部工具栏 */}

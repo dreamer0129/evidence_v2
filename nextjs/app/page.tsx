@@ -6,6 +6,7 @@ import { ArrowRight, FileText, Lock, Network, Scale, Shield, Zap } from "lucide-
 import type { NextPage } from "next";
 import { Button } from "~~/components/ui/button";
 import { WavyBackground } from "~~/components/ui/wavy-background";
+import { useAuth } from "~~/contexts/AuthContext";
 
 const AnimatedCounter = ({ target, duration = 2000 }: { target: number; duration?: number }) => {
   const [count, setCount] = useState(0);
@@ -107,6 +108,8 @@ const StatCard = ({ value, label, icon }: { value: number; label: string; icon: 
 );
 
 const Home: NextPage = () => {
+  const { user } = useAuth();
+  
   return (
     <div className="min-h-screen relative overflow-hidden bg-black">
       {/* Dynamic background - full page */}
@@ -126,8 +129,8 @@ const Home: NextPage = () => {
 
       {/* Content overlay */}
       <div className="relative z-10">
-        {/* Hero Section - 为固定 Header 留出空间 */}
-        <section className="min-h-screen flex items-center justify-center px-6 pt-16">
+        {/* Hero Section - 根据登录状态为固定 Header 留出空间 */}
+        <section className={`min-h-screen flex items-center justify-center px-6 ${user ? "pt-16" : "pt-0"}`}>
           <div className="max-w-7xl mx-auto text-center">
             <div className="mb-8">
               <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 mb-6">
@@ -312,6 +315,9 @@ const Home: NextPage = () => {
             </div>
           </div>
         </section>
+
+        {/* 为固定 Footer 留出空间 */}
+        {user && <div className="h-28" />}
       </div>
 
       {/* Global styles for animations */}
