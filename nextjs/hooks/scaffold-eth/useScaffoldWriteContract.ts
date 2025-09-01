@@ -13,6 +13,8 @@ import {
   ScaffoldWriteContractOptions,
   ScaffoldWriteContractVariables,
   UseScaffoldWriteConfig,
+  detectWalletType,
+  getWalletTypeDescription,
   simulateContractWriteAndNotifyError,
 } from "~~/utils/scaffold-eth/contract";
 
@@ -107,6 +109,8 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
 
     try {
       setIsMining(true);
+      const totalStartTime = Date.now();
+      console.log("🔧 [useScaffoldWriteContract] 开始合约写入流程");
       const { blockConfirmations, onBlockConfirmation, ...mutateOptions } = options || {};
 
       const writeContractObject = {
@@ -115,16 +119,29 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
         ...variables,
       } as WriteContractVariables<Abi, string, any[], Config, number>;
 
+      let simulateTime = 0;
       if (!finalConfig?.disableSimulate) {
+        console.log("🔍 [useScaffoldWriteContract] 开始模拟调用...");
+        const simulateStartTime = Date.now();
         await simulateContractWriteAndNotifyError({
           wagmiConfig,
           writeContractParams: writeContractObject,
           chainId: selectedNetwork.id as AllowedChainIds,
         });
+        const simulateEndTime = Date.now();
+        simulateTime = simulateEndTime - simulateStartTime;
+        console.log(`✅ [useScaffoldWriteContract] 模拟调用完成, 耗时: ${simulateTime}ms`);
+      } else {
+        console.log("⏭️  [useScaffoldWriteContract] 模拟调用已禁用");
       }
 
-      const makeWriteWithParams = () =>
-        wagmiContractWrite.writeContractAsync(
+      console.log("💰 [useScaffoldWriteContract] 准备实际交易...");
+      const transactionStartTime = Date.now();
+
+      const makeWriteWithParams = async () => {
+        console.log("🔗 [useScaffoldWriteContract] 调用 wagmi writeContractAsync...");
+        const wagmiCallStartTime = Date.now();
+        const result = await wagmiContractWrite.writeContractAsync(
           writeContractObject,
           mutateOptions as
             | MutateOptions<
@@ -135,10 +152,47 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
               >
             | undefined,
         );
+        const wagmiCallEndTime = Date.now();
+        const wagmiTime = wagmiCallEndTime - wagmiCallStartTime;
+        console.log(`✅ [useScaffoldWriteContract] wagmi调用完成, 耗时: ${wagmiTime}ms`);
+
+        // 检测是否使用 MetaMask（wagmi调用时间较长通常表示外部钱包）
+        if (wagmiTime > 1000) {
+          console.log("⚠️  检测到可能的外部钱包（如MetaMask）连接，交易确认需要用户交互");
+        }
+
+        return result;
+      };
+
+      console.log("🚀 [useScaffoldWriteContract] 准备调用 useTransactor...");
+      const transactorCallStartTime = Date.now();
       const writeTxResult = await writeTx(makeWriteWithParams, { blockConfirmations, onBlockConfirmation });
+      const transactorCallEndTime = Date.now();
+      const transactorTime = transactorCallEndTime - transactorCallStartTime;
+      console.log(`✅ [useScaffoldWriteContract] useTransactor调用完成, 耗时: ${transactorTime}ms`);
+
+      const transactionEndTime = Date.now();
+      const totalTransactionTime = transactionEndTime - transactionStartTime;
+      const totalTime = transactionEndTime - totalStartTime;
+
+      console.log(`✅ [useScaffoldWriteContract] 交易执行耗时: ${totalTransactionTime}ms`);
+
+      // 检测钱包类型并显示性能统计
+      const walletType = detectWalletType(totalTransactionTime);
+      const walletDescription = getWalletTypeDescription(walletType);
+      console.log(`📊 [useScaffoldWriteContract] 总耗时: ${totalTime}ms (模拟: ${simulateTime}ms)`);
+      console.log(`👛 [useScaffoldWriteContract] 检测到钱包类型: ${walletDescription}`);
+
+      // 性能警告：如果总时间超过预期阈值
+      if (totalTransactionTime > 30000) {
+        // 30秒
+        console.warn("⚠️  交易执行时间过长，请检查网络连接和钱包配置");
+        console.log("💡 提示: 使用 Local Burner Wallet 可以获得更快的开发体验");
+      }
 
       return writeTxResult;
     } catch (e: any) {
+      console.error("❌ [useScaffoldWriteContract] 交易执行失败:", e);
       throw e;
     } finally {
       setIsMining(false);

@@ -58,15 +58,43 @@ export const useTransactor = (_walletClient?: WalletClient): TransactionFunc => 
       const publicClient = getPublicClient(wagmiConfig);
 
       notificationId = notification.loading(<TxnNotification message="Awaiting for user confirmation" />);
+
+      console.log("⏰ [useTransactor] 准备执行交易函数...");
+      const txExecutionStartTime = Date.now();
+
+      let txFunctionTime = 0;
+      let txType = "unknown";
+
       if (typeof tx === "function") {
-        // Tx is already prepared by the caller
+        txType = "function";
+        console.log("🔧 [useTransactor] 执行预准备的交易函数...");
+        const txFunctionStartTime = Date.now();
         const result = await tx();
+        const txFunctionEndTime = Date.now();
+        txFunctionTime = txFunctionEndTime - txFunctionStartTime;
+        console.log(`✅ [useTransactor] 交易函数执行完成, 耗时: ${txFunctionTime}ms`);
         transactionHash = result;
       } else if (tx != null) {
+        txType = "direct";
+        console.log("🔧 [useTransactor] 直接发送交易...");
+        const sendTxStartTime = Date.now();
         transactionHash = await walletClient.sendTransaction(tx as SendTransactionParameters);
+        const sendTxEndTime = Date.now();
+        txFunctionTime = sendTxEndTime - sendTxStartTime;
+        console.log(`✅ [useTransactor] 交易发送完成, 耗时: ${txFunctionTime}ms`);
       } else {
         throw new Error("Incorrect transaction passed to transactor");
       }
+
+      const txExecutionEndTime = Date.now();
+      const totalTxExecutionTime = txExecutionEndTime - txExecutionStartTime;
+      console.log(`✅ [useTransactor] 交易执行总耗时: ${totalTxExecutionTime}ms (类型: ${txType})`);
+
+      // 检测可能的 MetaMask 用户确认延迟
+      if (txFunctionTime > 5000 && txType === "function") {
+        console.log("⚠️  检测到长时间的交易确认，可能是MetaMask用户交互延迟");
+      }
+
       notification.remove(notificationId);
 
       blockExplorerTxURL = chainId ? getBlockExplorerTxLink(chainId, transactionHash) : "";

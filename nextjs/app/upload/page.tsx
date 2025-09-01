@@ -84,9 +84,11 @@ const Upload: NextPage = () => {
 
     try {
       setIsSubmitting(true);
+      console.log("🚀 开始提交存证流程...");
 
       // Convert hex hash to bytes32 format
       const hashBytes32 = `0x${fileInfo.hash}` as `0x${string}`;
+      console.log("📋 哈希值转换完成:", hashBytes32);
 
       // Prepare file metadata struct
       const metadata = {
@@ -95,19 +97,36 @@ const Upload: NextPage = () => {
         size: BigInt(fileInfo.file.size),
         creationTime: BigInt(fileInfo.file.lastModified),
       };
+      console.log("📄 文件元数据准备完成:", metadata);
 
       // Prepare hash info struct
       const hashInfo = {
         algorithm: "SHA256",
         value: hashBytes32,
       };
+      console.log("🔐 哈希信息准备完成:", hashInfo);
+
+      console.log("⏳ 准备调用 submitEvidence 合约函数...");
+      const startTime = Date.now();
+      console.log("📝 调用参数:", {
+        functionName: "submitEvidence",
+        args: [metadata, hashInfo, fileDescription],
+      });
+
+      console.log("💰 等待钱包确认... (这里应该弹出 MetaMask)");
+      const walletStartTime = Date.now();
 
       const result = await submitEvidence({
         functionName: "submitEvidence",
         args: [metadata, hashInfo, fileDescription],
       });
 
+      const walletEndTime = Date.now();
+      console.log(`✅ 钱包确认完成, 耗时: ${walletEndTime - walletStartTime}ms`);
+      console.log(`📊 总调用耗时: ${walletEndTime - startTime}ms`);
+
       if (result) {
+        console.log("🎉 交易提交成功, 交易哈希:", result);
         setSubmissionResult({
           evidenceId: "", // Will be retrieved from transaction receipt
           transactionHash: result,
@@ -118,10 +137,17 @@ const Upload: NextPage = () => {
         setFileDescription("");
       }
     } catch (error: any) {
-      console.error("Submit evidence error:", error);
+      console.error("❌ Submit evidence error:", error);
+      console.error("📊 Error details:", {
+        name: error.name,
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+      });
       notification.error(`存证提交失败: ${error.message || "未知错误"}`);
     } finally {
       setIsSubmitting(false);
+      console.log("🏁 提交流程结束");
     }
   };
 
