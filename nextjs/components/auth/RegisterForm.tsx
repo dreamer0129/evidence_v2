@@ -60,7 +60,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
     setSuccess("");
 
     try {
-      const { confirmPassword, ...registerData } = formData;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { confirmPassword: _, ...registerData } = formData;
       await register(registerData);
       setSuccess("注册成功！请登录");
 

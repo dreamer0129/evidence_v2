@@ -33,7 +33,7 @@ export const FileUpload = ({ onChange }: { onChange?: (files: File[]) => void })
     // 只保留第一个文件，实现文件替换而不是追加
     const fileToKeep = newFiles.length > 0 ? [newFiles[0]] : [];
     setFiles(fileToKeep);
-    onChange && onChange(fileToKeep);
+    onChange?.(fileToKeep);
   };
 
   const handleClick = () => {
