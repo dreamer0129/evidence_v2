@@ -126,32 +126,8 @@ const Home: NextPage = () => {
 
       {/* Content overlay */}
       <div className="relative z-10">
-        {/* Navigation */}
-        <nav className="absolute top-0 left-0 right-0 z-50 p-6">
-          <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
-                <Network className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-white font-bold text-xl">EvidenceChain</span>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                className="text-gray-300 hover:text-white border border-transparent hover:border-white/20 bg-white/5 hover:bg-white/10"
-              >
-                文档
-              </Button>
-              <Button className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600">
-                连接钱包
-              </Button>
-            </div>
-          </div>
-        </nav>
-
-        {/* Hero Section */}
-        <section className="min-h-screen flex items-center justify-center px-6">
+        {/* Hero Section - 为固定 Header 留出空间 */}
+        <section className="min-h-screen flex items-center justify-center px-6 pt-16">
           <div className="max-w-7xl mx-auto text-center">
             <div className="mb-8">
               <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 mb-6">
