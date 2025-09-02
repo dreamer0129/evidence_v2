@@ -89,7 +89,8 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     <div className="w-full" {...getRootProps()}>
       <GlassContainer
         className={cn(
-          "relative min-h-[200px] cursor-pointer transition-all duration-300",
+          "relative cursor-pointer transition-all duration-300",
+          files.length === 0 ? "min-h-[200px]" : "min-h-[100px]",
           isDragActive && "ring-2 ring-blue-400 ring-offset-2",
           error && "ring-2 ring-red-400 ring-offset-2",
           className,
@@ -120,7 +121,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
           )}
         </AnimatePresence>
 
-        <div className="relative z-10 p-8">
+        <div className={cn("relative z-10", files.length === 0 ? "p-8" : "p-4")}>
           <AnimatePresence mode="wait">
             {files.length === 0 ? (
               <motion.div

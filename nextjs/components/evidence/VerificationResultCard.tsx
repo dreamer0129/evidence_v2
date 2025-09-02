@@ -53,7 +53,7 @@ export const VerificationResultCard: React.FC<VerificationResultCardProps> = ({
           </motion.div>
 
           <motion.h3
-            className="text-xl font-semibold text-white mb-2"
+            className="text-xl font-semibold text-black dark:text-white mb-2"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
@@ -62,7 +62,7 @@ export const VerificationResultCard: React.FC<VerificationResultCardProps> = ({
           </motion.h3>
 
           <motion.p
-            className="text-gray-400"
+            className="text-gray-800 dark:text-gray-300"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
@@ -180,7 +180,7 @@ export const VerificationResultCard: React.FC<VerificationResultCardProps> = ({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="text-gray-300"
+              className="text-gray-800 dark:text-gray-300"
             >
               {result.success ? "文件完整性验证通过，存证有效" : result.error || "未找到匹配的存证记录"}
             </motion.p>
@@ -196,77 +196,77 @@ export const VerificationResultCard: React.FC<VerificationResultCardProps> = ({
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* File Name */}
-                <div className="bg-black/20 rounded-lg p-4 border border-white/10">
+                <div className="bg-gray-50 dark:bg-black/20 rounded-lg p-4 border border-gray-200 dark:border-white/10">
                   <div className="flex items-center space-x-2 mb-2">
-                    <FileText className="w-4 h-4 text-blue-400" />
-                    <span className="text-sm text-gray-400">文件名称</span>
+                    <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">文件名称</span>
                   </div>
-                  <p className="text-white font-medium truncate">{result.fileName}</p>
+                  <p className="text-gray-900 dark:text-white font-medium truncate">{result.fileName}</p>
                 </div>
 
                 {/* Timestamp */}
-                <div className="bg-black/20 rounded-lg p-4 border border-white/10">
+                <div className="bg-gray-50 dark:bg-black/20 rounded-lg p-4 border border-gray-200 dark:border-white/10">
                   <div className="flex items-center space-x-2 mb-2">
-                    <Calendar className="w-4 h-4 text-purple-400" />
-                    <span className="text-sm text-gray-400">存证时间</span>
+                    <Calendar className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">存证时间</span>
                   </div>
-                  <p className="text-white font-medium">{result.timestamp}</p>
+                  <p className="text-gray-900 dark:text-white font-medium">{result.timestamp}</p>
                 </div>
 
                 {/* Evidence ID */}
-                <div className="bg-black/20 rounded-lg p-4 border border-white/10">
+                <div className="bg-gray-50 dark:bg-black/20 rounded-lg p-4 border border-gray-200 dark:border-white/10">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-2">
-                      <Database className="w-4 h-4 text-green-400" />
-                      <span className="text-sm text-gray-400">存证ID</span>
+                      <Database className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      <span className="text-sm text-gray-600 dark:text-gray-400">存证ID</span>
                     </div>
                     <button
                       onClick={() => handleCopy(result.evidenceId, "evidenceId")}
-                      className="text-gray-400 hover:text-white transition-colors"
+                      className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                     >
                       <Copy className="w-4 h-4" />
                     </button>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <code className="text-blue-400 font-mono text-sm flex-1 truncate">{result.evidenceId}</code>
-                    {copiedField === "evidenceId" && <span className="text-xs text-green-400">已复制</span>}
+                    <code className="text-blue-600 dark:text-blue-400 font-mono text-sm flex-1 truncate">{result.evidenceId}</code>
+                    {copiedField === "evidenceId" && <span className="text-xs text-green-600 dark:text-green-400">已复制</span>}
                   </div>
                 </div>
 
                 {/* Block Height */}
-                <div className="bg-black/20 rounded-lg p-4 border border-white/10">
+                <div className="bg-gray-50 dark:bg-black/20 rounded-lg p-4 border border-gray-200 dark:border-white/10">
                   <div className="flex items-center space-x-2 mb-2">
-                    <Blocks className="w-4 h-4 text-orange-400" />
-                    <span className="text-sm text-gray-400">区块高度</span>
+                    <Blocks className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">区块高度</span>
                   </div>
-                  <p className="text-white font-medium">#{result.blockHeight}</p>
+                  <p className="text-gray-900 dark:text-white font-medium">#{result.blockHeight}</p>
                 </div>
               </div>
 
               {/* File Hash */}
-              <div className="bg-black/20 rounded-lg p-4 border border-white/10">
+              <div className="bg-gray-50 dark:bg-black/20 rounded-lg p-4 border border-gray-200 dark:border-white/10">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-2">
-                    <Hash className="w-4 h-4 text-cyan-400" />
-                    <span className="text-sm text-gray-400">文件哈希 (SHA256)</span>
+                    <Hash className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">文件哈希 (SHA256)</span>
                   </div>
                   <button
                     onClick={() => handleCopy(result.fileHash, "fileHash")}
-                    className="text-gray-400 hover:text-white transition-colors"
+                    className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                   >
                     <Copy className="w-4 h-4" />
                   </button>
                 </div>
                 <div className="space-y-2">
-                  <code className="text-blue-400 font-mono text-xs break-all block">{result.fileHash}</code>
-                  {copiedField === "fileHash" && <span className="text-xs text-green-400">哈希值已复制</span>}
+                  <code className="text-blue-600 dark:text-blue-400 font-mono text-xs break-all block">{result.fileHash}</code>
+                  {copiedField === "fileHash" && <span className="text-xs text-green-600 dark:text-green-400">哈希值已复制</span>}
                 </div>
               </div>
 
               {/* Status */}
               <div className="flex items-center justify-center space-x-2 py-2">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <span className="text-green-400 font-medium">{result.status}</span>
+                <div className="w-2 h-2 bg-green-600 dark:bg-green-400 rounded-full animate-pulse" />
+                <span className="text-green-600 dark:text-green-400 font-medium">{result.status}</span>
               </div>
             </motion.div>
           )}
@@ -277,10 +277,10 @@ export const VerificationResultCard: React.FC<VerificationResultCardProps> = ({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="mt-6 bg-black/20 rounded-lg p-4 border border-white/10"
+              className="mt-6 bg-gray-50 dark:bg-black/20 rounded-lg p-4 border border-gray-200 dark:border-white/10"
             >
-              <p className="text-sm text-gray-400 mb-2">查询的哈希值:</p>
-              <code className="text-xs text-red-400 font-mono break-all">{result.fileHash}</code>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">查询的哈希值:</p>
+              <code className="text-xs text-red-600 dark:text-red-400 font-mono break-all">{result.fileHash}</code>
             </motion.div>
           )}
         </GlassCard>

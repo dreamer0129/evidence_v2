@@ -6,7 +6,6 @@ import type { NextPage } from "next";
 import { FileUpload } from "~~/components/evidence/FileUpload";
 import { GlassContainer } from "~~/components/evidence/GlassContainer";
 import { GlassCard } from "~~/components/evidence/GlassContainer";
-import { GlassTabs } from "~~/components/evidence/GlassTabs";
 import { PageBackgroundWrapper } from "~~/components/evidence/PageBackgroundWrapper";
 import { VerificationResultCard } from "~~/components/evidence/VerificationResultCard";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
@@ -126,50 +125,65 @@ const Verify: NextPage = () => {
 
   return (
     <PageBackgroundWrapper>
-      <div className="container mx-auto px-4 py-8">
+      <div className="min-h-screen pt-24 pb-8 px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">存证验证</h1>
-          <p className="text-base text-gray-600 dark:text-gray-300">验证文件完整性和区块链存证记录</p>
+          <h1 className="text-3xl font-bold text-black dark:text-white mb-2">存证验证</h1>
+          <p className="text-base text-gray-800 dark:text-gray-300">验证文件完整性和区块链存证记录</p>
         </div>
 
         {/* Main Content */}
         <div className="max-w-4xl mx-auto space-y-8">
-          {/* Tabs */}
-          <GlassCard>
-            <GlassTabs
-              tabs={[
-                {
-                  id: "file",
-                  label: "文件验证",
-                  icon: <Upload className="w-4 h-4" />,
-                },
-                {
-                  id: "hash",
-                  label: "哈希验证",
-                  icon: <Hash className="w-4 h-4" />,
-                },
-              ]}
-              activeTab={activeTab}
-              onTabChange={tabId => {
-                setActiveTab(tabId);
-                setVerificationResult(null);
-                setFile(null);
-                setHashInput("");
-              }}
-            />
-          </GlassCard>
+          {/* Tab Navigation */}
+          <div className="mb-6">
+            <GlassCard intensity="low" className="p-2">
+              <div className="flex space-x-1">
+                <button
+                  className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
+                    activeTab === "file"
+                      ? "bg-white/50 dark:bg-black/50 text-blue-600 dark:text-blue-400 shadow-sm"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                  }`}
+                  onClick={() => {
+                    setActiveTab("file");
+                    setVerificationResult(null);
+                    setFile(null);
+                    setHashInput("");
+                  }}
+                >
+                  <Upload width={20} height={20} />
+                  <span>文件验证</span>
+                </button>
+                <button
+                  className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
+                    activeTab === "hash"
+                      ? "bg-white/50 dark:bg-black/50 text-blue-600 dark:text-blue-400 shadow-sm"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                  }`}
+                  onClick={() => {
+                    setActiveTab("hash");
+                    setVerificationResult(null);
+                    setFile(null);
+                    setHashInput("");
+                  }}
+                >
+                  <Hash width={20} height={20} />
+                  <span>哈希验证</span>
+                </button>
+              </div>
+            </GlassCard>
+          </div>
 
           {/* Verification Content */}
           <GlassCard>
             {activeTab === "file" && (
               <div className="space-y-6">
                 <div className="text-center mb-6">
-                  <h3 className="text-xl font-semibold text-white mb-2">上传文件进行验证</h3>
-                  <p className="text-gray-400">系统将计算文件哈希值并与区块链上的存证记录进行比对</p>
+                  <h3 className="text-2xl font-semibold text-black dark:text-white mb-2">上传文件进行验证</h3>
+                  <p className="text-gray-800 dark:text-gray-300">系统将计算文件哈希值并与区块链上的存证记录进行比对</p>
                 </div>
 
-                <FileUpload onChange={handleFileUpload} maxSize={100} acceptedTypes={["*"]} className="min-h-[300px]" />
+                <FileUpload onChange={handleFileUpload} maxSize={100} acceptedTypes={["*"]} />
 
                 {file && (
                   <div className="flex justify-center">
@@ -195,23 +209,23 @@ const Verify: NextPage = () => {
             {activeTab === "hash" && (
               <div className="space-y-6">
                 <div className="text-center mb-6">
-                  <h3 className="text-xl font-semibold text-white mb-2">输入哈希值进行验证</h3>
-                  <p className="text-gray-400">直接输入文件的SHA256哈希值进行验证</p>
+                  <h3 className="text-2xl font-semibold text-black dark:text-white mb-2">输入哈希值进行验证</h3>
+                  <p className="text-gray-800 dark:text-gray-300">直接输入文件的SHA256哈希值进行验证</p>
                 </div>
 
                 <GlassContainer intensity="low" className="p-6">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">文件哈希 (SHA256)</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">文件哈希 (SHA256)</label>
                       <textarea
                         value={hashInput}
                         onChange={e => setHashInput(e.target.value)}
                         placeholder="请输入64位十六进制哈希值"
-                        className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:border-blue-400 focus:outline-none transition-colors font-mono text-sm"
+                        className="w-full px-4 py-3 bg-white/10 dark:bg-black/10 border border-white/20 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-400 focus:outline-none transition-colors font-mono text-sm"
                         rows={3}
                         maxLength={64}
                       />
-                      <p className="mt-2 text-xs text-gray-500">64位十六进制字符 (0-9, a-f)</p>
+                      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">64位十六进制字符 (0-9, a-f)</p>
                     </div>
 
                     <div className="flex justify-center">
@@ -244,28 +258,28 @@ const Verify: NextPage = () => {
           {/* Info Section */}
           <GlassCard intensity="low">
             <div className="text-center space-y-4">
-              <h3 className="text-lg font-semibold text-white">如何验证？</h3>
+              <h3 className="text-lg font-semibold text-black dark:text-white">如何验证？</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
                 <div className="space-y-2">
                   <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center mb-2">
                     <span className="text-blue-400 font-bold">1</span>
                   </div>
-                  <h4 className="font-medium text-white">选择验证方式</h4>
-                  <p className="text-sm text-gray-400">上传文件或直接输入哈希值</p>
+                  <h4 className="font-medium text-black dark:text-white">选择验证方式</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">上传文件或直接输入哈希值</p>
                 </div>
                 <div className="space-y-2">
                   <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center mb-2">
                     <span className="text-purple-400 font-bold">2</span>
                   </div>
-                  <h4 className="font-medium text-white">系统计算哈希</h4>
-                  <p className="text-sm text-gray-400">自动计算SHA256哈希值</p>
+                  <h4 className="font-medium text-black dark:text-white">系统计算哈希</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">自动计算SHA256哈希值</p>
                 </div>
                 <div className="space-y-2">
                   <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center mb-2">
                     <span className="text-green-400 font-bold">3</span>
                   </div>
-                  <h4 className="font-medium text-white">区块链验证</h4>
-                  <p className="text-sm text-gray-400">查询区块链存证记录</p>
+                  <h4 className="font-medium text-black dark:text-white">区块链验证</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">查询区块链存证记录</p>
                 </div>
               </div>
             </div>
