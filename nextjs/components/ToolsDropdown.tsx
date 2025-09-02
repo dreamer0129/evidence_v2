@@ -2,16 +2,15 @@
 
 import React, { useRef, useState } from "react";
 import Link from "next/link";
+import { Address as AddressType, createWalletClient, http, parseEther } from "viem";
+import { hardhat } from "viem/chains";
 import { BugAntIcon, ChevronDownIcon, MagnifyingGlassIcon, WrenchScrewdriverIcon } from "@heroicons/react/24/outline";
+import { BanknotesIcon } from "@heroicons/react/24/outline";
+import { AddressInput, EtherInput } from "~~/components/scaffold-eth";
 import { Button } from "~~/components/ui/button";
 import { useOutsideClick } from "~~/hooks/scaffold-eth";
-import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
-import { hardhat } from "viem/chains";
-import { BanknotesIcon } from "@heroicons/react/24/outline";
-import { Address as AddressType, createWalletClient, http, parseEther } from "viem";
-import { useAccount } from "wagmi";
-import { AddressInput, EtherInput } from "~~/components/scaffold-eth";
 import { useTransactor } from "~~/hooks/scaffold-eth";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { notification } from "~~/utils/scaffold-eth";
 
 interface ToolsDropdownProps {
@@ -52,7 +51,7 @@ export const ToolsDropdown = ({ className = "" }: ToolsDropdownProps) => {
             <div className="space-y-2">
               {/* Faucet - 仅在本地网络显示 */}
               {isLocalNetwork && (
-                <div 
+                <div
                   className="flex items-center justify-between p-2 rounded hover:bg-gray-50 transition-colors cursor-pointer"
                   onClick={() => {
                     setIsFaucetModalOpen(true);
@@ -65,7 +64,7 @@ export const ToolsDropdown = ({ className = "" }: ToolsDropdownProps) => {
                   </div>
                 </div>
               )}
-              
+
               {/* Block Explorer */}
               <Link
                 href="/blockexplorer"
@@ -108,10 +107,7 @@ export const ToolsDropdown = ({ className = "" }: ToolsDropdownProps) => {
           <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold">Local Faucet</h3>
-              <button 
-                onClick={() => setIsFaucetModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
+              <button onClick={() => setIsFaucetModalOpen(false)} className="text-gray-500 hover:text-gray-700">
                 ✕
               </button>
             </div>
@@ -138,7 +134,6 @@ const FaucetModalContent = ({ onClose }: { onClose: () => void }) => {
   const [faucetAddress, setFaucetAddress] = useState<AddressType>();
   const [sendValue, setSendValue] = useState("");
 
-  const { chain: ConnectedChain } = useAccount();
   const faucetTxn = useTransactor(localWalletClient);
 
   React.useEffect(() => {
@@ -191,32 +186,30 @@ const FaucetModalContent = ({ onClose }: { onClose: () => void }) => {
       <div className="flex space-x-4">
         <div>
           <span className="text-sm font-bold">From:</span>
-          <div className="text-sm">{faucetAddress?.slice(0, 6)}...{faucetAddress?.slice(-4)}</div>
+          <div className="text-sm">
+            {faucetAddress?.slice(0, 6)}...{faucetAddress?.slice(-4)}
+          </div>
         </div>
         <div>
           <span className="text-sm font-bold pl-3">Available:</span>
           <div className="text-sm">Balance: 10000 ETH</div>
         </div>
       </div>
-      
+
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Destination Address
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Destination Address</label>
         <AddressInput
           placeholder="Destination Address"
           value={inputAddress ?? ""}
           onChange={value => setInputAddress(value as AddressType)}
         />
       </div>
-      
+
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Amount to send
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Amount to send</label>
         <EtherInput placeholder="Amount to send" value={sendValue} onChange={value => setSendValue(value)} />
       </div>
-      
+
       <button
         onClick={sendETH}
         disabled={loading}

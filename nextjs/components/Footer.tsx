@@ -40,7 +40,9 @@ export const Footer = () => {
               {nativeCurrencyPrice > 0 && (
                 <div className="hidden sm:flex items-center px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
                   <CurrencyDollarIcon className="w-4 h-4 text-green-400 mr-2" />
-                  <AdaptiveText variant="secondary" className="text-sm">{nativeCurrencyPrice.toFixed(2)}</AdaptiveText>
+                  <AdaptiveText variant="secondary" className="text-sm">
+                    {nativeCurrencyPrice.toFixed(2)}
+                  </AdaptiveText>
                 </div>
               )}
 

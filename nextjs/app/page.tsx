@@ -109,7 +109,7 @@ const StatCard = ({ value, label, icon }: { value: number; label: string; icon: 
 
 const Home: NextPage = () => {
   const { user } = useAuth();
-  
+
   return (
     <div className="min-h-screen relative overflow-hidden bg-black">
       {/* Dynamic background - full page */}
@@ -315,8 +315,7 @@ const Home: NextPage = () => {
             </div>
           </div>
         </section>
-
-        </div>
+      </div>
 
       {/* Global styles for animations */}
       <style jsx global>{`

@@ -6,7 +6,6 @@ import { hardhat } from "viem/chains";
 import {
   ArrowUpTrayIcon,
   Bars3Icon,
-  BugAntIcon,
   CheckBadgeIcon,
   ClockIcon,
   HomeIcon,
@@ -16,10 +15,10 @@ import {
 import { AdaptiveBackground } from "~~/components/AdaptiveBackground";
 import { AdaptiveNavLink } from "~~/components/AdaptiveNavLink";
 import { AdaptiveText } from "~~/components/AdaptiveText";
-import { ToolsDropdown } from "~~/components/ToolsDropdown";
 import { MobileWalletConnection } from "~~/components/MobileWalletConnection";
+import { ToolsDropdown } from "~~/components/ToolsDropdown";
 import { UserDropdown } from "~~/components/UserDropdown";
-import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
+import { FaucetButton } from "~~/components/scaffold-eth";
 import { useAuth } from "~~/contexts/AuthContext";
 import { useOutsideClick, useTargetNetwork } from "~~/hooks/scaffold-eth";
 
@@ -123,11 +122,6 @@ export const Header = () => {
             {/* User Dropdown */}
             <UserDropdown username={user.username} onLogout={logout} />
 
-            {/* Wallet Connection */}
-            <div className="hidden sm:block">
-              <RainbowKitCustomConnectButton />
-            </div>
-
             {/* Mobile menu button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -143,10 +137,7 @@ export const Header = () => {
 
       {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div
-          ref={mobileMenuRef}
-          className="md:hidden absolute top-16 left-0 right-0"
-        >
+        <div ref={mobileMenuRef} className="md:hidden absolute top-16 left-0 right-0">
           <AdaptiveBackground variant="header" className="absolute inset-0">
             <div className="h-full" />
           </AdaptiveBackground>
@@ -155,16 +146,20 @@ export const Header = () => {
 
             {/* Mobile Tools */}
             <div className="border-t border-gray-200 pt-4 mt-4">
-              <AdaptiveText variant="muted" className="text-xs mb-2">工具</AdaptiveText>
+              <AdaptiveText variant="muted" className="text-xs mb-2">
+                工具
+              </AdaptiveText>
               <div className="space-y-2">
                 {/* Mobile Faucet */}
                 {isLocalNetwork && (
                   <div className="flex items-center justify-between">
-                    <AdaptiveText variant="secondary" className="text-sm">Faucet</AdaptiveText>
+                    <AdaptiveText variant="secondary" className="text-sm">
+                      Faucet
+                    </AdaptiveText>
                     <FaucetButton />
                   </div>
                 )}
-                
+
                 {/* Mobile Block Explorer */}
                 <Link
                   href="/blockexplorer"
