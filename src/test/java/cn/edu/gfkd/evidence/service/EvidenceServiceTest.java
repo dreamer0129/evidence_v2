@@ -208,12 +208,14 @@ class EvidenceServiceTest {
     @Test
     void deleteEvidence_shouldDeleteEvidence() {
         // Given
+        when(evidenceRepository.existsById(1L)).thenReturn(true);
         doNothing().when(evidenceRepository).deleteById(1L);
         
         // When
         evidenceService.deleteEvidence(1L);
         
         // Then
+        verify(evidenceRepository, times(1)).existsById(1L);
         verify(evidenceRepository, times(1)).deleteById(1L);
     }
 }

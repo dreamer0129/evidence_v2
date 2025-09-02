@@ -71,7 +71,7 @@ const deployedContracts = {
       deployedOnBlock: 1,
     },
     EvidenceStorage: {
-      address: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      address: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
       abi: [
         {
           inputs: [
@@ -191,7 +191,7 @@ const deployedContracts = {
           anonymous: false,
           inputs: [
             {
-              indexed: true,
+              indexed: false,
               internalType: "string",
               name: "evidenceId",
               type: "string",
@@ -216,7 +216,7 @@ const deployedContracts = {
           anonymous: false,
           inputs: [
             {
-              indexed: true,
+              indexed: false,
               internalType: "string",
               name: "evidenceId",
               type: "string",
@@ -247,7 +247,7 @@ const deployedContracts = {
           anonymous: false,
           inputs: [
             {
-              indexed: true,
+              indexed: false,
               internalType: "string",
               name: "evidenceId",
               type: "string",
@@ -259,7 +259,7 @@ const deployedContracts = {
               type: "address",
             },
             {
-              indexed: true,
+              indexed: false,
               internalType: "bytes32",
               name: "hashValue",
               type: "bytes32",
@@ -278,7 +278,7 @@ const deployedContracts = {
           anonymous: false,
           inputs: [
             {
-              indexed: true,
+              indexed: false,
               internalType: "string",
               name: "evidenceId",
               type: "string",
@@ -800,7 +800,7 @@ const deployedContracts = {
         renounceOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
       },
-      deployedOnBlock: 3,
+      deployedOnBlock: 8,
     },
   },
 } as const;

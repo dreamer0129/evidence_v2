@@ -47,17 +47,17 @@ contract EvidenceStorage is Ownable, ReentrancyGuard {
 
     // Events
     event EvidenceSubmitted(
-        string indexed evidenceId,
+        string evidenceId,
         address indexed user,
-        bytes32 indexed hashValue,
+        bytes32 hashValue,
         uint256 timestamp
     );
 
-    event EvidenceVerified(string indexed evidenceId, bool isValid, uint256 timestamp);
+    event EvidenceVerified(string evidenceId,bool isValid, uint256 timestamp);
 
-    event EvidenceRevoked(string indexed evidenceId, address indexed revoker, uint256 timestamp);
+    event EvidenceRevoked(string evidenceId, address indexed revoker, uint256 timestamp);
 
-    event EvidenceStatusChanged(string indexed evidenceId, string oldStatus, string newStatus, uint256 timestamp);
+    event EvidenceStatusChanged(string evidenceId, string oldStatus, string newStatus, uint256 timestamp);
 
     // Custom errors
     error EvidenceAlreadyExists(string evidenceId);

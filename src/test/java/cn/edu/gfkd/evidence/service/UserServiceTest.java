@@ -68,7 +68,7 @@ class UserServiceTest {
 
         assertThatThrownBy(() -> userService.registerUser(registrationDto))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("用户名已存在");
+                .hasMessageContaining("Username already exists:");
     }
 
     @Test
@@ -78,7 +78,7 @@ class UserServiceTest {
 
         assertThatThrownBy(() -> userService.registerUser(registrationDto))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("邮箱已存在");
+                .hasMessageContaining("Email already exists:");
     }
 
     @Test
