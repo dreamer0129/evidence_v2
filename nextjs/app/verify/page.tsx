@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Hash, Upload } from "lucide-react";
 import type { NextPage } from "next";
+import { FileUpload } from "~~/components/evidence/FileUpload";
+import { GlassContainer } from "~~/components/evidence/GlassContainer";
+import { GlassCard } from "~~/components/evidence/GlassContainer";
+import { GlassTabs } from "~~/components/evidence/GlassTabs";
+import { PageBackgroundWrapper } from "~~/components/evidence/PageBackgroundWrapper";
+import { VerificationResultCard } from "~~/components/evidence/VerificationResultCard";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { calculateSHA256 } from "~~/lib/utils";
 
@@ -118,153 +125,154 @@ const Verify: NextPage = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-center mb-8">存证验证</h1>
+    <PageBackgroundWrapper>
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">存证验证</h1>
+          <p className="text-base text-gray-600 dark:text-gray-300">验证文件完整性和区块链存证记录</p>
+        </div>
 
-      <div role="tablist" className="tabs tabs-lifted">
-        <a
-          role="tab"
-          className={`tab ${activeTab === "file" ? "tab-active" : ""}`}
-          onClick={() => {
-            setActiveTab("file");
-            setVerificationResult(null);
-          }}
-        >
-          文件验证
-        </a>
-        <a
-          role="tab"
-          className={`tab ${activeTab === "hash" ? "tab-active" : ""}`}
-          onClick={() => {
-            setActiveTab("hash");
-            setVerificationResult(null);
-          }}
-        >
-          哈希验证
-        </a>
-      </div>
+        {/* Main Content */}
+        <div className="max-w-4xl mx-auto space-y-8">
+          {/* Tabs */}
+          <GlassCard>
+            <GlassTabs
+              tabs={[
+                {
+                  id: "file",
+                  label: "文件验证",
+                  icon: <Upload className="w-4 h-4" />,
+                },
+                {
+                  id: "hash",
+                  label: "哈希验证",
+                  icon: <Hash className="w-4 h-4" />,
+                },
+              ]}
+              activeTab={activeTab}
+              onTabChange={tabId => {
+                setActiveTab(tabId);
+                setVerificationResult(null);
+                setFile(null);
+                setHashInput("");
+              }}
+            />
+          </GlassCard>
 
-      <div className="bg-base-100 p-6 rounded-box shadow-md">
-        {activeTab === "file" && (
-          <div>
-            <div className="form-control w-full">
-              <label className="label">
-                <span className="label-text">选择要验证的文件</span>
-              </label>
-              <input
-                type="file"
-                className="file-input file-input-bordered w-full"
-                onChange={e => handleFileUpload(e.target.files ? Array.from(e.target.files) : [])}
-              />
-              {file && (
-                <div className="mt-2 text-sm text-gray-500">
-                  已选择: {file.name} ({file.size} bytes)
+          {/* Verification Content */}
+          <GlassCard>
+            {activeTab === "file" && (
+              <div className="space-y-6">
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-semibold text-white mb-2">上传文件进行验证</h3>
+                  <p className="text-gray-400">系统将计算文件哈希值并与区块链上的存证记录进行比对</p>
                 </div>
-              )}
-            </div>
-            <button className="btn btn-primary mt-6" onClick={handleVerification} disabled={isVerifying || !file}>
-              {isVerifying ? (
-                <>
-                  <span className="loading loading-spinner loading-sm"></span>
-                  验证中...
-                </>
-              ) : (
-                "验证"
-              )}
-            </button>
-          </div>
-        )}
 
-        {activeTab === "hash" && (
-          <div>
-            <div className="form-control w-full">
-              <label className="label">
-                <span className="label-text">输入文件哈希 (SHA256)</span>
-              </label>
-              <input
-                type="text"
-                placeholder="请输入要验证的文件哈希值"
-                className="input input-bordered w-full font-mono"
-                value={hashInput}
-                onChange={e => setHashInput(e.target.value)}
-                maxLength={64}
-              />
-              <label className="label">
-                <span className="label-text-alt text-gray-500">64位十六进制字符 (0-9, a-f)</span>
-              </label>
-            </div>
-            <button
-              className="btn btn-primary mt-6"
-              onClick={handleVerification}
-              disabled={isVerifying || !hashInput.trim()}
-            >
-              {isVerifying ? (
-                <>
-                  <span className="loading loading-spinner loading-sm"></span>
-                  验证中...
-                </>
-              ) : (
-                "验证"
-              )}
-            </button>
-          </div>
-        )}
-      </div>
+                <FileUpload onChange={handleFileUpload} maxSize={100} acceptedTypes={["*"]} className="min-h-[300px]" />
 
-      {verificationResult && (
-        <div className="card bg-base-100 shadow-xl mt-8">
-          <div className="card-body">
-            <h2 className="card-title">验证结果</h2>
-            {verificationResult.success ? (
-              <div>
-                <p className="text-success">✅ 验证成功！文件哈希值匹配，存证有效。</p>
-                <div className="overflow-x-auto mt-4">
-                  <table className="table w-full">
-                    <tbody>
-                      <tr>
-                        <th>文件名称</th>
-                        <td>{verificationResult.fileName}</td>
-                      </tr>
-                      <tr>
-                        <th>存证时间</th>
-                        <td>{verificationResult.timestamp}</td>
-                      </tr>
-                      <tr>
-                        <th>文件哈希</th>
-                        <td className="font-mono text-xs">{verificationResult.fileHash}</td>
-                      </tr>
-                      <tr>
-                        <th>存证ID</th>
-                        <td className="font-mono text-xs">{verificationResult.evidenceId}</td>
-                      </tr>
-                      <tr>
-                        <th>区块高度</th>
-                        <td>{verificationResult.blockHeight}</td>
-                      </tr>
-                      <tr>
-                        <th>存证状态</th>
-                        <td className="text-success">{verificationResult.status}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <p className="text-error">❌ 验证失败！</p>
-                <p className="text-gray-600 mt-2">{verificationResult.error}</p>
-                {verificationResult.fileHash && (
-                  <div className="mt-4 p-3 bg-gray-100 rounded">
-                    <p className="text-sm text-gray-700">查询的哈希值:</p>
-                    <code className="text-xs font-mono break-all">{verificationResult.fileHash}</code>
+                {file && (
+                  <div className="flex justify-center">
+                    <button
+                      onClick={handleVerification}
+                      disabled={isVerifying}
+                      className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+                    >
+                      {isVerifying ? (
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>验证中...</span>
+                        </div>
+                      ) : (
+                        "开始验证"
+                      )}
+                    </button>
                   </div>
                 )}
               </div>
             )}
-          </div>
+
+            {activeTab === "hash" && (
+              <div className="space-y-6">
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-semibold text-white mb-2">输入哈希值进行验证</h3>
+                  <p className="text-gray-400">直接输入文件的SHA256哈希值进行验证</p>
+                </div>
+
+                <GlassContainer intensity="low" className="p-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">文件哈希 (SHA256)</label>
+                      <textarea
+                        value={hashInput}
+                        onChange={e => setHashInput(e.target.value)}
+                        placeholder="请输入64位十六进制哈希值"
+                        className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:border-blue-400 focus:outline-none transition-colors font-mono text-sm"
+                        rows={3}
+                        maxLength={64}
+                      />
+                      <p className="mt-2 text-xs text-gray-500">64位十六进制字符 (0-9, a-f)</p>
+                    </div>
+
+                    <div className="flex justify-center">
+                      <button
+                        onClick={handleVerification}
+                        disabled={isVerifying || !hashInput.trim()}
+                        className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+                      >
+                        {isVerifying ? (
+                          <div className="flex items-center space-x-2">
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <span>验证中...</span>
+                          </div>
+                        ) : (
+                          "开始验证"
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </GlassContainer>
+              </div>
+            )}
+          </GlassCard>
+
+          {/* Verification Result */}
+          {(isVerifying || verificationResult) && (
+            <VerificationResultCard result={verificationResult} isVerifying={isVerifying} />
+          )}
+
+          {/* Info Section */}
+          <GlassCard intensity="low">
+            <div className="text-center space-y-4">
+              <h3 className="text-lg font-semibold text-white">如何验证？</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                <div className="space-y-2">
+                  <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center mb-2">
+                    <span className="text-blue-400 font-bold">1</span>
+                  </div>
+                  <h4 className="font-medium text-white">选择验证方式</h4>
+                  <p className="text-sm text-gray-400">上传文件或直接输入哈希值</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center mb-2">
+                    <span className="text-purple-400 font-bold">2</span>
+                  </div>
+                  <h4 className="font-medium text-white">系统计算哈希</h4>
+                  <p className="text-sm text-gray-400">自动计算SHA256哈希值</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center mb-2">
+                    <span className="text-green-400 font-bold">3</span>
+                  </div>
+                  <h4 className="font-medium text-white">区块链验证</h4>
+                  <p className="text-sm text-gray-400">查询区块链存证记录</p>
+                </div>
+              </div>
+            </div>
+          </GlassCard>
         </div>
-      )}
-    </div>
+      </div>
+    </PageBackgroundWrapper>
   );
 };
 

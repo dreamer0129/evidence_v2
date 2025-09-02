@@ -111,7 +111,7 @@ export const UserDropdown = ({ username, onLogout }: UserDropdownProps) => {
                 <p className="text-sm font-medium text-white truncate">
                   {isConnected && address ? `${address.slice(0, 6)}...${address.slice(-4)}` : username}
                 </p>
-                <p className="text-xs text-gray-400">
+                <div className="text-xs text-gray-400">
                   {isConnected ? (
                     <span className="flex items-center space-x-1">
                       <span>{targetNetwork.name}</span>
@@ -121,7 +121,7 @@ export const UserDropdown = ({ username, onLogout }: UserDropdownProps) => {
                   ) : (
                     "已登录用户"
                   )}
-                </p>
+                </div>
               </div>
             </div>
           </div>
