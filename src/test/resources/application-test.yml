@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:sqlite::memory:
+    driver-class-name: org.sqlite.JDBC
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+  h2:
+    console:
+      enabled: true
+
+blockchain:
+  node:
+    url: http://localhost:8545
+
+logging:
+  level:
+    cn.edu.gfkd.evidence: DEBUG
+    org.web3j: DEBUG
