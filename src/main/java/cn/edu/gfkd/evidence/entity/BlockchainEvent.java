@@ -38,8 +38,8 @@ public class BlockchainEvent {
     @Column(name = "is_processed", nullable = false)
     private Boolean isProcessed = false;
     
-    @Column(name = "event_data", columnDefinition = "TEXT")
-    private String eventData;
+    @Column(name = "raw_data", columnDefinition = "TEXT")
+    private String rawData;
     
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -49,14 +49,14 @@ public class BlockchainEvent {
     
     public BlockchainEvent(String contractAddress, String eventName, BigInteger blockNumber, 
                           String transactionHash, BigInteger logIndex, 
-                          BigInteger blockTimestamp, String eventData) {
+                          BigInteger blockTimestamp, String rawData) {
         this.contractAddress = contractAddress;
         this.eventName = eventName;
         this.blockNumber = blockNumber;
         this.transactionHash = transactionHash;
         this.logIndex = logIndex;
         this.blockTimestamp = blockTimestamp;
-        this.eventData = eventData;
+        this.rawData = rawData;
         this.processedAt = LocalDateTime.now();
     }
     
@@ -133,12 +133,12 @@ public class BlockchainEvent {
         this.isProcessed = isProcessed;
     }
     
-    public String getEventData() {
-        return eventData;
+    public String getRawData() {
+        return rawData;
     }
     
-    public void setEventData(String eventData) {
-        this.eventData = eventData;
+    public void setRawData(String rawData) {
+        this.rawData = rawData;
     }
     
     public LocalDateTime getCreatedAt() {

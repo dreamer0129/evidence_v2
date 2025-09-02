@@ -18,6 +18,6 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("用户不存在: " + username));
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }
 }

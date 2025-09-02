@@ -4,7 +4,6 @@ import cn.edu.gfkd.evidence.dto.ApiResponse;
 import cn.edu.gfkd.evidence.dto.EvidenceDTO;
 import cn.edu.gfkd.evidence.entity.Evidence;
 import cn.edu.gfkd.evidence.service.EvidenceService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -121,9 +120,8 @@ public class EvidenceController {
     public ResponseEntity<ApiResponse<EvidenceStatsDTO>> getEvidenceStatsByUser(@PathVariable String userAddress) {
         long totalCount = evidenceService.countByUserAddress(userAddress);
         long effectiveCount = evidenceService.countByUserAddressAndStatus(userAddress, "effective");
-        long verifiedCount = 0; // Verification is not stored as it's just an operation
         
-        EvidenceStatsDTO stats = new EvidenceStatsDTO(totalCount, effectiveCount, verifiedCount);
+        EvidenceStatsDTO stats = new EvidenceStatsDTO(totalCount, effectiveCount);
         
         return ResponseEntity.ok(ApiResponse.success(stats));
     }
@@ -133,10 +131,9 @@ public class EvidenceController {
     public ResponseEntity<ApiResponse<OverviewStatsDTO>> getOverviewStats() {
         long totalCount = evidenceService.count();
         long effectiveCount = evidenceService.countByStatus("effective");
-        long verifiedCount = 0; // Verification is not stored as it's just an operation
         long revokedCount = evidenceService.countByStatus("revoked");
         
-        OverviewStatsDTO stats = new OverviewStatsDTO(totalCount, effectiveCount, verifiedCount, revokedCount);
+        OverviewStatsDTO stats = new OverviewStatsDTO(totalCount, effectiveCount, revokedCount);
         
         return ResponseEntity.ok(ApiResponse.success(stats));
     }
@@ -183,37 +180,33 @@ public class EvidenceController {
     public static class EvidenceStatsDTO {
         private long totalCount;
         private long effectiveCount;
-        private long verifiedCount;
+
         
-        public EvidenceStatsDTO(long totalCount, long effectiveCount, long verifiedCount) {
+        public EvidenceStatsDTO(long totalCount, long effectiveCount) {
             this.totalCount = totalCount;
             this.effectiveCount = effectiveCount;
-            this.verifiedCount = verifiedCount;
+
         }
         
         // Getters
         public long getTotalCount() { return totalCount; }
         public long getEffectiveCount() { return effectiveCount; }
-        public long getVerifiedCount() { return verifiedCount; }
     }
     
     public static class OverviewStatsDTO {
         private long totalCount;
         private long effectiveCount;
-        private long verifiedCount;
         private long revokedCount;
         
-        public OverviewStatsDTO(long totalCount, long effectiveCount, long verifiedCount, long revokedCount) {
+        public OverviewStatsDTO(long totalCount, long effectiveCount,  long revokedCount) {
             this.totalCount = totalCount;
             this.effectiveCount = effectiveCount;
-            this.verifiedCount = verifiedCount;
             this.revokedCount = revokedCount;
         }
         
         // Getters
         public long getTotalCount() { return totalCount; }
         public long getEffectiveCount() { return effectiveCount; }
-        public long getVerifiedCount() { return verifiedCount; }
         public long getRevokedCount() { return revokedCount; }
     }
 }

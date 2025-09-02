@@ -48,4 +48,6 @@ public interface EvidenceRepository extends JpaRepository<Evidence, Long> {
     long countByUserAddress(String userAddress);
     
     long countByStatus(String status);
+    
+    long countByUserAddressAndStatus(String userAddress, String status);
 }
