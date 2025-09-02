@@ -1,7 +1,7 @@
 package cn.edu.gfkd.evidence.config;
 
 import cn.edu.gfkd.evidence.service.UserDetailsServiceImpl;
-import cn.edu.gfkd.evidence.util.JwtUtils;
+import cn.edu.gfkd.evidence.utils.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,8 +40,7 @@ public class WebSecurityConfig {
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }

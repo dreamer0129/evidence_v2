@@ -43,9 +43,11 @@ export const EvidenceTableRow = ({ evidenceId, index, onViewDetails }: EvidenceT
         {isLoading ? (
           <div className="loading loading-spinner loading-xs"></div>
         ) : data ? (
-          Number(data.timestamp) > 1000000000000 
-            ? new Date(Number(data.timestamp)).toLocaleString("zh-CN")
-            : new Date(Number(data.timestamp) * 1000).toLocaleString("zh-CN")
+          Number(data.timestamp) > 1000000000000 ? (
+            new Date(Number(data.timestamp)).toLocaleString("zh-CN")
+          ) : (
+            new Date(Number(data.timestamp) * 1000).toLocaleString("zh-CN")
+          )
         ) : (
           "-"
         )}

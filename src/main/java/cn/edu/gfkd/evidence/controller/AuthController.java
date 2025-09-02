@@ -5,7 +5,7 @@ import cn.edu.gfkd.evidence.dto.UserLoginDto;
 import cn.edu.gfkd.evidence.dto.UserRegistrationDto;
 import cn.edu.gfkd.evidence.entity.User;
 import cn.edu.gfkd.evidence.service.UserService;
-import cn.edu.gfkd.evidence.util.JwtUtils;
+import cn.edu.gfkd.evidence.utils.JwtUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +28,7 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody UserRegistrationDto registrationDto) {
         try {
-            User user = userService.registerUser(registrationDto);
+            userService.registerUser(registrationDto);
             return ResponseEntity.ok().body("用户注册成功!");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
