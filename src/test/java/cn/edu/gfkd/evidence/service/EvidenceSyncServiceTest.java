@@ -51,6 +51,7 @@ class EvidenceSyncServiceTest {
     void setUp() {
         // EvidenceSubmitted event
         evidenceSubmittedEvent = new BlockchainEventReceived(
+            "0xContractAddress123456789",
             "EvidenceSubmitted",
             "EVID:1234567890:CN-001",
             "0x1234567890123456789012345678901234567890",
@@ -66,6 +67,7 @@ class EvidenceSyncServiceTest {
         
         // EvidenceStatusChanged event
         statusChangedEvent = new BlockchainEventReceived(
+            "0xContractAddress123456789",
             "EvidenceStatusChanged",
             "EVID:1234567890:CN-001",
             null,
@@ -98,8 +100,8 @@ class EvidenceSyncServiceTest {
         
         // BlockchainEvent entity
         blockchainEvent = new BlockchainEvent(
+            "0xContractAddress123456789",
             "EvidenceSubmitted",
-            "EVID:1234567890:CN-001",
             BigInteger.valueOf(100),
             "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
             BigInteger.ZERO,
@@ -113,7 +115,6 @@ class EvidenceSyncServiceTest {
             "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
             BigInteger.valueOf(99)
         );
-        syncStatus.setId(1L);
     }
     
     @Test

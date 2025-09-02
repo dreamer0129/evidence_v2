@@ -14,16 +14,16 @@ public class BlockchainEvent {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
+    @Column(name = "contract_address", nullable = false, length = 42)
+    private String contractAddress;
+    
     @Column(name = "event_name", nullable = false, length = 50)
     private String eventName;
-    
-    @Column(name = "evidence_id", length = 100)
-    private String evidenceId;
     
     @Column(name = "block_number", nullable = false)
     private BigInteger blockNumber;
     
-    @Column(name = "transaction_hash", unique = true, nullable = false, length = 66)
+    @Column(name = "transaction_hash", nullable = false, length = 66)
     private String transactionHash;
     
     @Column(name = "log_index", nullable = false)
@@ -47,11 +47,11 @@ public class BlockchainEvent {
     
     public BlockchainEvent() {}
     
-    public BlockchainEvent(String eventName, String evidenceId, BigInteger blockNumber, 
+    public BlockchainEvent(String contractAddress, String eventName, BigInteger blockNumber, 
                           String transactionHash, BigInteger logIndex, 
                           BigInteger blockTimestamp, String eventData) {
+        this.contractAddress = contractAddress;
         this.eventName = eventName;
-        this.evidenceId = evidenceId;
         this.blockNumber = blockNumber;
         this.transactionHash = transactionHash;
         this.logIndex = logIndex;
@@ -69,20 +69,20 @@ public class BlockchainEvent {
         this.id = id;
     }
     
+    public String getContractAddress() {
+        return contractAddress;
+    }
+    
+    public void setContractAddress(String contractAddress) {
+        this.contractAddress = contractAddress;
+    }
+    
     public String getEventName() {
         return eventName;
     }
     
     public void setEventName(String eventName) {
         this.eventName = eventName;
-    }
-    
-    public String getEvidenceId() {
-        return evidenceId;
-    }
-    
-    public void setEvidenceId(String evidenceId) {
-        this.evidenceId = evidenceId;
     }
     
     public BigInteger getBlockNumber() {

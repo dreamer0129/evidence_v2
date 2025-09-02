@@ -142,8 +142,8 @@ public class BlockchainEventListener {
         BigInteger blockTimestamp = getBlockTimestamp(event.log.getBlockNumber());
         
         BlockchainEvent blockchainEvent = new BlockchainEvent(
+            evidenceStorage.getContractAddress(),
             "EvidenceSubmitted",
-            Numeric.toHexString(event.evidenceId),
             event.log.getBlockNumber(),
             event.log.getTransactionHash(),
             BigInteger.valueOf(event.log.getLogIndex().longValue()),
@@ -154,6 +154,7 @@ public class BlockchainEventListener {
         blockchainEventRepository.save(blockchainEvent);
         
         BlockchainEventReceived eventReceived = new BlockchainEventReceived(
+            evidenceStorage.getContractAddress(),
             "EvidenceSubmitted",
             Numeric.toHexString(event.evidenceId),
             event.user,
@@ -175,8 +176,8 @@ public class BlockchainEventListener {
         BigInteger blockTimestamp = getBlockTimestamp(event.log.getBlockNumber());
         
         BlockchainEvent blockchainEvent = new BlockchainEvent(
+            evidenceStorage.getContractAddress(),
             "EvidenceStatusChanged",
-            Numeric.toHexString(event.evidenceId),
             event.log.getBlockNumber(),
             event.log.getTransactionHash(),
             BigInteger.valueOf(event.log.getLogIndex().longValue()),
@@ -187,6 +188,7 @@ public class BlockchainEventListener {
         blockchainEventRepository.save(blockchainEvent);
         
         BlockchainEventReceived eventReceived = new BlockchainEventReceived(
+            evidenceStorage.getContractAddress(),
             "EvidenceStatusChanged",
             Numeric.toHexString(event.evidenceId),
             null,
@@ -208,8 +210,8 @@ public class BlockchainEventListener {
         BigInteger blockTimestamp = getBlockTimestamp(event.log.getBlockNumber());
         
         BlockchainEvent blockchainEvent = new BlockchainEvent(
+            evidenceStorage.getContractAddress(),
             "EvidenceVerified",
-            Numeric.toHexString(event.evidenceId),
             event.log.getBlockNumber(),
             event.log.getTransactionHash(),
             BigInteger.valueOf(event.log.getLogIndex().longValue()),
@@ -220,6 +222,7 @@ public class BlockchainEventListener {
         blockchainEventRepository.save(blockchainEvent);
         
         BlockchainEventReceived eventReceived = new BlockchainEventReceived(
+            evidenceStorage.getContractAddress(),
             "EvidenceVerified",
             Numeric.toHexString(event.evidenceId),
             null,
@@ -241,8 +244,8 @@ public class BlockchainEventListener {
         BigInteger blockTimestamp = getBlockTimestamp(event.log.getBlockNumber());
         
         BlockchainEvent blockchainEvent = new BlockchainEvent(
+            evidenceStorage.getContractAddress(),
             "EvidenceRevoked",
-            Numeric.toHexString(event.evidenceId),
             event.log.getBlockNumber(),
             event.log.getTransactionHash(),
             BigInteger.valueOf(event.log.getLogIndex().longValue()),
@@ -253,6 +256,7 @@ public class BlockchainEventListener {
         blockchainEventRepository.save(blockchainEvent);
         
         BlockchainEventReceived eventReceived = new BlockchainEventReceived(
+            evidenceStorage.getContractAddress(),
             "EvidenceRevoked",
             Numeric.toHexString(event.evidenceId),
             null,

@@ -4,6 +4,7 @@ import java.math.BigInteger;
 
 public class BlockchainEventReceived {
     
+    private final String contractAddress;
     private final String eventName;
     private final String evidenceId;
     private final String userAddress;
@@ -16,11 +17,12 @@ public class BlockchainEventReceived {
     private final BigInteger blockTimestamp;
     private final boolean isValid;
     
-    public BlockchainEventReceived(String eventName, String evidenceId, String userAddress, 
+    public BlockchainEventReceived(String contractAddress, String eventName, String evidenceId, String userAddress, 
                                   String hashValue, String oldStatus, String newStatus,
                                   BigInteger blockNumber, String transactionHash, 
                                   BigInteger logIndex, BigInteger blockTimestamp, 
                                   boolean isValid) {
+        this.contractAddress = contractAddress;
         this.eventName = eventName;
         this.evidenceId = evidenceId;
         this.userAddress = userAddress;
@@ -35,6 +37,10 @@ public class BlockchainEventReceived {
     }
     
     // Getters
+    public String getContractAddress() {
+        return contractAddress;
+    }
+    
     public String getEventName() {
         return eventName;
     }
