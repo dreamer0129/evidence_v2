@@ -216,7 +216,9 @@ const Verify: NextPage = () => {
                 <GlassContainer intensity="low" className="p-6">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">文件哈希 (SHA256)</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        文件哈希 (SHA256)
+                      </label>
                       <textarea
                         value={hashInput}
                         onChange={e => setHashInput(e.target.value)}

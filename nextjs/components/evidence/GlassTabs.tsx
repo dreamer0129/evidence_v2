@@ -20,7 +20,7 @@ export const GlassTabs: React.FC<GlassTabsProps> = ({ tabs, activeTab, onTabChan
     <div className={cn("relative", className)}>
       {/* Tabs container */}
       <div className="flex space-x-1 p-1 bg-black/20 backdrop-blur-md rounded-xl border border-white/10">
-        {tabs.map((tab) => {
+        {tabs.map(tab => {
           const isActive = activeTab === tab.id;
 
           return (

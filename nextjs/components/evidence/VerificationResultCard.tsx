@@ -228,8 +228,12 @@ export const VerificationResultCard: React.FC<VerificationResultCardProps> = ({
                     </button>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <code className="text-blue-600 dark:text-blue-400 font-mono text-sm flex-1 truncate">{result.evidenceId}</code>
-                    {copiedField === "evidenceId" && <span className="text-xs text-green-600 dark:text-green-400">已复制</span>}
+                    <code className="text-blue-600 dark:text-blue-400 font-mono text-sm flex-1 truncate">
+                      {result.evidenceId}
+                    </code>
+                    {copiedField === "evidenceId" && (
+                      <span className="text-xs text-green-600 dark:text-green-400">已复制</span>
+                    )}
                   </div>
                 </div>
 
@@ -258,8 +262,12 @@ export const VerificationResultCard: React.FC<VerificationResultCardProps> = ({
                   </button>
                 </div>
                 <div className="space-y-2">
-                  <code className="text-blue-600 dark:text-blue-400 font-mono text-xs break-all block">{result.fileHash}</code>
-                  {copiedField === "fileHash" && <span className="text-xs text-green-600 dark:text-green-400">哈希值已复制</span>}
+                  <code className="text-blue-600 dark:text-blue-400 font-mono text-xs break-all block">
+                    {result.fileHash}
+                  </code>
+                  {copiedField === "fileHash" && (
+                    <span className="text-xs text-green-600 dark:text-green-400">哈希值已复制</span>
+                  )}
                 </div>
               </div>
 

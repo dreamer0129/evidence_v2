@@ -20,7 +20,12 @@ export const EvidenceTableRow = ({ evidenceId, index, onViewDetails }: EvidenceT
         {isLoading ? (
           <div className="loading loading-spinner loading-xs"></div>
         ) : data ? (
-          data.metadata.fileName || "-"
+          <div
+            className="font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs"
+            title={data.metadata.fileName || "-"}
+          >
+            {data.metadata.fileName || "-"}
+          </div>
         ) : (
           "-"
         )}
@@ -38,7 +43,9 @@ export const EvidenceTableRow = ({ evidenceId, index, onViewDetails }: EvidenceT
         {isLoading ? (
           <div className="loading loading-spinner loading-xs"></div>
         ) : data ? (
-          new Date(Number(data.timestamp) * 1000).toLocaleString("zh-CN")
+          Number(data.timestamp) > 1000000000000 
+            ? new Date(Number(data.timestamp)).toLocaleString("zh-CN")
+            : new Date(Number(data.timestamp) * 1000).toLocaleString("zh-CN")
         ) : (
           "-"
         )}
