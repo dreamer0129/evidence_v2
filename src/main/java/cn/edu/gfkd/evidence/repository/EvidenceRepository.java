@@ -29,7 +29,7 @@ public interface EvidenceRepository extends JpaRepository<EvidenceEntity, Long> 
 
     Page<EvidenceEntity> findByStatus(String status, Pageable pageable);
 
-    @Query("SELECT e FROM Evidence e WHERE " +
+    @Query("SELECT e FROM EvidenceEntity e WHERE " +
             "(:evidenceId IS NULL OR e.evidenceId LIKE %:evidenceId%) AND " +
             "(:userAddress IS NULL OR e.userAddress = :userAddress) AND " +
             "(:status IS NULL OR e.status = :status)")
@@ -38,7 +38,7 @@ public interface EvidenceRepository extends JpaRepository<EvidenceEntity, Long> 
             @Param("status") String status,
             Pageable pageable);
 
-    @Query("SELECT MAX(e.blockNumber) FROM Evidence e")
+    @Query("SELECT MAX(e.blockNumber) FROM EvidenceEntity e")
     BigInteger findMaxBlockNumber();
 
     boolean existsByEvidenceId(String evidenceId);
