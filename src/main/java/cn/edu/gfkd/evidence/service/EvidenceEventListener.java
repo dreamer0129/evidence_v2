@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import io.reactivex.disposables.Disposable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -62,10 +60,6 @@ public class EvidenceEventListener {
     private EvidenceStorage evidenceStorage;
     private ScheduledExecutorService scheduler;
     private final AtomicBoolean syncInProgress = new AtomicBoolean(false);
-    private final AtomicBoolean realTimeListeningInProgress = new AtomicBoolean(false);
-    private volatile Disposable evidenceSubmittedDisposable;
-    private volatile Disposable evidenceStatusChangedDisposable;
-    private volatile Disposable evidenceRevokedDisposable;
 
     public void init() {
         scheduler = Executors.newScheduledThreadPool(2);
@@ -75,9 +69,6 @@ public class EvidenceEventListener {
 
             // Start event listening after a delay
             scheduler.schedule(this::startEventListening, 3, TimeUnit.SECONDS);
-
-            // Schedule periodic sync checks with adaptive timing
-            scheduler.scheduleAtFixedRate(this::checkAndSyncMissingEvents, 5, 15, TimeUnit.SECONDS);
 
         } catch (Exception e) {
             log.error("Failed to initialize blockchain event listener", e);
@@ -227,7 +218,7 @@ public class EvidenceEventListener {
             BlockchainEvent blockchainEvent = createBlockchainEvent(event, "EvidenceSubmitted", blockTimestamp);
             blockchainEventRepository.save(blockchainEvent);
 
-            BlockchainEventReceived eventReceived = createEvidenceSubmittedEvent(event, blockTimestamp);
+            BlockchainEventReceived eventReceived = createEvidenceSubmittedEvent(event);
             eventPublisher.publishEvent(eventReceived);
 
             log.info("EvidenceSubmitted event processed for evidenceId: {}", event.evidenceId);
@@ -310,8 +301,7 @@ public class EvidenceEventListener {
     }
 
     private BlockchainEventReceived createEvidenceSubmittedEvent(
-            EvidenceStorage.EvidenceSubmittedEventResponse event,
-            BigInteger blockTimestamp) throws Exception {
+            EvidenceStorage.EvidenceSubmittedEventResponse event) throws Exception {
 
         return BlockchainEventReceived.builder()
                 .contractAddress(evidenceStorage.getContractAddress())
@@ -319,7 +309,7 @@ public class EvidenceEventListener {
                 .blockNumber(event.log.getBlockNumber())
                 .transactionHash(event.log.getTransactionHash())
                 .logIndex(BigInteger.valueOf(event.log.getLogIndex().longValue()))
-                .blockTimestamp(blockTimestamp)
+                .blockTimestamp(event.timestamp)
                 .rawData(objectMapper.writeValueAsString(event))
                 .parameter("evidenceId", event.evidenceId)
                 .parameter("user", event.user)
@@ -411,8 +401,6 @@ public class EvidenceEventListener {
         try {
             syncMissingEventsOnStartup();
             startRealTimeEventListening();
-            // Schedule periodic health checks for real-time listening
-            scheduler.scheduleAtFixedRate(this::checkAndRestartRealTimeListening, 1, 1, TimeUnit.MINUTES);
 
         } catch (Exception e) {
             log.error("Failed to start blockchain event listener", e);
@@ -421,19 +409,11 @@ public class EvidenceEventListener {
     }
 
     private void startRealTimeEventListening() {
-        if (!realTimeListeningInProgress.compareAndSet(false, true)) {
-            log.warn("Real-time event listening already in progress, skipping duplicate start");
-            return;
-        }
+        log.info("Starting real-time blockchain event listening...");
 
         try {
-            log.info("Starting real-time blockchain event listening...");
-            
-            // Clean up existing subscriptions if any
-            cleanupExistingSubscriptions();
-            
             // Start EvidenceSubmitted event subscription
-            evidenceSubmittedDisposable = evidenceStorage.evidenceSubmittedEventFlowable(
+            evidenceStorage.evidenceSubmittedEventFlowable(
                     DefaultBlockParameterName.LATEST,
                     DefaultBlockParameterName.LATEST)
                     .subscribe(event -> {
@@ -443,12 +423,11 @@ public class EvidenceEventListener {
                             log.error("Error processing EvidenceSubmitted event", e);
                         }
                     }, error -> {
-                        log.error("Error in EvidenceSubmitted event subscription, attempting to restart...", error);
-                        scheduleRealTimeListeningRestart();
+                        log.error("Error in EvidenceSubmitted event subscription", error);
                     });
 
             // Start EvidenceStatusChanged event subscription
-            evidenceStatusChangedDisposable = evidenceStorage.evidenceStatusChangedEventFlowable(
+            evidenceStorage.evidenceStatusChangedEventFlowable(
                     DefaultBlockParameterName.LATEST,
                     DefaultBlockParameterName.LATEST)
                     .subscribe(event -> {
@@ -458,12 +437,11 @@ public class EvidenceEventListener {
                             log.error("Error processing EvidenceStatusChanged event", e);
                         }
                     }, error -> {
-                        log.error("Error in EvidenceStatusChanged event subscription, attempting to restart...", error);
-                        scheduleRealTimeListeningRestart();
+                        log.error("Error in EvidenceStatusChanged event subscription", error);
                     });
 
             // Start EvidenceRevoked event subscription
-            evidenceRevokedDisposable = evidenceStorage.evidenceRevokedEventFlowable(
+            evidenceStorage.evidenceRevokedEventFlowable(
                     DefaultBlockParameterName.LATEST,
                     DefaultBlockParameterName.LATEST)
                     .subscribe(event -> {
@@ -473,16 +451,14 @@ public class EvidenceEventListener {
                             log.error("Error processing EvidenceRevoked event", e);
                         }
                     }, error -> {
-                        log.error("Error in EvidenceRevoked event subscription, attempting to restart...", error);
-                        scheduleRealTimeListeningRestart();
+                        log.error("Error in EvidenceRevoked event subscription", error);
                     });
-                    
+
             log.info("Real-time blockchain event listening started successfully");
-            
+
         } catch (Exception e) {
             log.error("Failed to start real-time event listening", e);
-            realTimeListeningInProgress.set(false);
-            scheduleRealTimeListeningRestart();
+            throw new BlockchainException("Failed to start real-time event listening", e);
         }
     }
 
@@ -504,96 +480,7 @@ public class EvidenceEventListener {
         }
     }
 
-    public void checkAndSyncMissingEvents() {
-        if (!syncInProgress.compareAndSet(false, true)) {
-            log.debug("Sync already in progress, skipping duplicate check");
-            return;
-        }
-
-        try {
-            if (!isBlockchainConnected()) {
-                log.warn("Blockchain node not connected. Skipping sync check.");
-                return;
-            }
-
-            BigInteger currentBlock = getCurrentBlockNumber();
-            if (evidenceStorage == null) {
-                log.warn("EvidenceStorage contract not loaded. Skipping sync check.");
-                return;
-            }
-
-            SyncStatus syncStatus = syncStatusRepository.findById(evidenceStorage.getContractAddress()).orElse(null);
-            if (syncStatus == null) {
-                log.warn("No sync status found. Skipping sync check.");
-                return;
-            }
-
-            BigInteger lastSyncedBlock = syncStatus.getLastBlockNumber();
-            BigInteger blocksBehind = currentBlock.subtract(lastSyncedBlock);
-
-            if (blocksBehind.compareTo(BigInteger.valueOf(0)) > 0) {
-                log.info("Detected {} blocks behind. Triggering sync...", blocksBehind);
-
-                // Use smaller batch size for periodic sync to prevent blocking
-                BigInteger batchSize = BigInteger.valueOf(50);
-                BigInteger endBlock = lastSyncedBlock.add(batchSize);
-                if (endBlock.compareTo(currentBlock) > 0) {
-                    endBlock = currentBlock;
-                }
-
-                syncMissingEvents(lastSyncedBlock.add(BigInteger.ONE), endBlock, batchSize);
-            }
-
-        } catch (Exception e) {
-            log.error("Failed to check and sync missing events", e);
-        } finally {
-            syncInProgress.set(false);
-        }
-    }
-
-    private void syncMissingEvents(BigInteger startBlock, BigInteger endBlock, BigInteger batchSize) {
-        if (!syncInProgress.compareAndSet(false, true)) {
-            log.debug("Sync already in progress, skipping duplicate sync for blocks {} to {}", startBlock, endBlock);
-            return;
-        }
-
-        try {
-            log.info("Starting sync of blocks {} to {} with batch size {}", startBlock, endBlock, batchSize);
-            BigInteger current = startBlock;
-
-            while (current.compareTo(endBlock) <= 0) {
-                BigInteger batchEnd = current.add(batchSize).subtract(BigInteger.ONE);
-                if (batchEnd.compareTo(endBlock) > 0) {
-                    batchEnd = endBlock;
-                }
-
-                try {
-                    syncPastEvents(current, batchEnd);
-                    log.info("Synced blocks {} to {}", current, batchEnd);
-
-                    current = batchEnd.add(BigInteger.ONE);
-                    // Add small delay to avoid overwhelming the node
-                    try {
-                        Thread.sleep(50);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
-
-                } catch (Exception e) {
-                    log.error("Failed to sync blocks {} to {}", current, batchEnd, e);
-                    current = batchEnd.add(BigInteger.ONE);
-                }
-            }
-
-            log.info("Completed sync from block {} to {}", startBlock, endBlock);
-        } catch (Exception e) {
-            log.error("Failed to sync missing events from {} to {}", startBlock, endBlock, e);
-        } finally {
-            syncInProgress.set(false);
-        }
-    }
-
+    
     private BigInteger getCurrentBlockNumber() {
         try {
             org.web3j.protocol.core.methods.response.EthBlockNumber blockNumber = web3j.ethBlockNumber().send();
@@ -606,70 +493,11 @@ public class EvidenceEventListener {
         }
     }
 
-    private boolean isBlockchainConnected() {
-        try {
-            web3j.ethBlockNumber().send();
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private void cleanupExistingSubscriptions() {
-        log.debug("Cleaning up existing event subscriptions...");
-        
-        if (evidenceSubmittedDisposable != null && !evidenceSubmittedDisposable.isDisposed()) {
-            evidenceSubmittedDisposable.dispose();
-            log.debug("EvidenceSubmitted subscription disposed");
-        }
-        
-        if (evidenceStatusChangedDisposable != null && !evidenceStatusChangedDisposable.isDisposed()) {
-            evidenceStatusChangedDisposable.dispose();
-            log.debug("EvidenceStatusChanged subscription disposed");
-        }
-        
-        if (evidenceRevokedDisposable != null && !evidenceRevokedDisposable.isDisposed()) {
-            evidenceRevokedDisposable.dispose();
-            log.debug("EvidenceRevoked subscription disposed");
-        }
-        
-        evidenceSubmittedDisposable = null;
-        evidenceStatusChangedDisposable = null;
-        evidenceRevokedDisposable = null;
-    }
     
-    private void scheduleRealTimeListeningRestart() {
-        realTimeListeningInProgress.set(false);
-        log.warn("Scheduling real-time listening restart in 30 seconds...");
-        scheduler.schedule(this::startRealTimeEventListening, 30, TimeUnit.SECONDS);
-    }
     
-    private void checkAndRestartRealTimeListening() {
-        if (!isBlockchainConnected()) {
-            log.warn("Blockchain not connected during health check, attempting to restart real-time listening...");
-            scheduleRealTimeListeningRestart();
-            return;
-        }
-        
-        // Check if subscriptions are still active
-        boolean allSubscriptionsActive = (evidenceSubmittedDisposable != null && !evidenceSubmittedDisposable.isDisposed()) &&
-                                       (evidenceStatusChangedDisposable != null && !evidenceStatusChangedDisposable.isDisposed()) &&
-                                       (evidenceRevokedDisposable != null && !evidenceRevokedDisposable.isDisposed());
-        
-        if (!allSubscriptionsActive) {
-            log.warn("One or more event subscriptions are inactive, restarting real-time listening...");
-            scheduleRealTimeListeningRestart();
-        } else {
-            log.debug("All event subscriptions are active");
-        }
-    }
-
     public void shutdown() {
         log.info("Shutting down EvidenceEventListener...");
-        
-        // Clean up real-time subscriptions
-        cleanupExistingSubscriptions();
-        
+
         // Shutdown scheduler
         if (scheduler != null) {
             scheduler.shutdown();
@@ -684,7 +512,7 @@ public class EvidenceEventListener {
                 Thread.currentThread().interrupt();
             }
         }
-        
+
         log.info("EvidenceEventListener shutdown completed");
     }
 }
