@@ -18,13 +18,12 @@ import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.methods.request.EthFilter;
 import org.web3j.protocol.core.methods.response.EthBlock;
 import org.web3j.protocol.core.methods.response.EthLog;
+import org.web3j.protocol.core.methods.response.Log;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.protocol.core.RemoteCall;
 import org.web3j.tx.gas.DefaultGasProvider;
 import org.web3j.utils.Numeric;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import cn.edu.gfkd.evidence.entity.BlockchainEvent;
 import cn.edu.gfkd.evidence.entity.SyncStatus;
 import cn.edu.gfkd.evidence.event.BlockchainEventReceived;
@@ -59,7 +58,6 @@ public class EvidenceEventListener {
 
     private EvidenceStorage evidenceStorage;
     private ScheduledExecutorService scheduler;
-    private final AtomicBoolean syncInProgress = new AtomicBoolean(false);
 
     public void init() {
         scheduler = Executors.newScheduledThreadPool(2);
@@ -133,9 +131,10 @@ public class EvidenceEventListener {
                     evidenceStorage.getContractAddress());
 
             EthLog ethLogs = web3j.ethGetLogs(filter).send();
-            List<EthLog.LogResult> logResults = ethLogs.getLogs();
+            @SuppressWarnings("unchecked")
+            List<EthLog.LogResult<Log>> logResults = (List<EthLog.LogResult<Log>>) (List<?>) ethLogs.getLogs();
 
-            for (EthLog.LogResult logResult : logResults) {
+            for (EthLog.LogResult<Log> logResult : logResults) {
                 try {
                     processLogResult(logResult);
                 } catch (Exception e) {
@@ -153,11 +152,11 @@ public class EvidenceEventListener {
         }
     }
 
-    private void processLogResult(EthLog.LogResult logResult) throws Exception {
+    private void processLogResult(EthLog.LogResult<Log> logResult) throws Exception {
         Object logObj = logResult.get();
         if (logObj != null) {
             // The actual object returned is of type Log which extends EthLog.Log
-            org.web3j.protocol.core.methods.response.Log log = (org.web3j.protocol.core.methods.response.Log) logObj;
+            Log log = (Log) logObj;
             String txHash = log.getTransactionHash();
             if (txHash == null || txHash.isEmpty()) {
                 throw new BlockchainException("Transaction hash is null or empty");
@@ -412,9 +411,21 @@ public class EvidenceEventListener {
         log.info("Starting real-time blockchain event listening...");
 
         try {
+            // Get the last synced block number from SyncStatus
+            SyncStatus syncStatus = getOrCreateSyncStatus();
+            BigInteger startBlock = syncStatus.getLastBlockNumber();
+
+            // Start from the block after the last synced block to ensure continuity
+            DefaultBlockParameter fromBlock = startBlock.compareTo(BigInteger.ZERO) > 0
+                    ? DefaultBlockParameter.valueOf(startBlock.add(BigInteger.ONE))
+                    : DefaultBlockParameterName.LATEST;
+
+            log.info("Starting real-time event listening from block: {}",
+                    fromBlock instanceof DefaultBlockParameterName ? "LATEST" : startBlock.add(BigInteger.ONE));
+
             // Start EvidenceSubmitted event subscription
             evidenceStorage.evidenceSubmittedEventFlowable(
-                    DefaultBlockParameterName.LATEST,
+                    fromBlock,
                     DefaultBlockParameterName.LATEST)
                     .subscribe(event -> {
                         try {
@@ -428,7 +439,7 @@ public class EvidenceEventListener {
 
             // Start EvidenceStatusChanged event subscription
             evidenceStorage.evidenceStatusChangedEventFlowable(
-                    DefaultBlockParameterName.LATEST,
+                    fromBlock,
                     DefaultBlockParameterName.LATEST)
                     .subscribe(event -> {
                         try {
@@ -442,7 +453,7 @@ public class EvidenceEventListener {
 
             // Start EvidenceRevoked event subscription
             evidenceStorage.evidenceRevokedEventFlowable(
-                    DefaultBlockParameterName.LATEST,
+                    fromBlock,
                     DefaultBlockParameterName.LATEST)
                     .subscribe(event -> {
                         try {
@@ -472,7 +483,7 @@ public class EvidenceEventListener {
             if (blocksBehind.compareTo(BigInteger.TEN) > 0) {
                 log.info("Detected {} blocks behind current block. Syncing missing events...", blocksBehind);
 
-                syncMissingEvents(lastSyncedBlock.add(BigInteger.ONE), currentBlock, BigInteger.valueOf(1000));
+                syncInBatches(lastSyncedBlock.add(BigInteger.ONE), currentBlock, BigInteger.valueOf(1000));
             }
 
         } catch (Exception e) {
@@ -480,7 +491,38 @@ public class EvidenceEventListener {
         }
     }
 
-    
+    private void syncInBatches(BigInteger startBlock, BigInteger endBlock, BigInteger batchSize) {
+        log.info("Starting sync of blocks {} to {} with batch size {}", startBlock, endBlock, batchSize);
+        BigInteger current = startBlock;
+
+        while (current.compareTo(endBlock) <= 0) {
+            BigInteger batchEnd = current.add(batchSize).subtract(BigInteger.ONE);
+            if (batchEnd.compareTo(endBlock) > 0) {
+                batchEnd = endBlock;
+            }
+
+            try {
+                syncPastEvents(current, batchEnd);
+                log.info("Synced blocks {} to {}", current, batchEnd);
+
+                current = batchEnd.add(BigInteger.ONE);
+                // Add small delay to avoid overwhelming the node
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+
+            } catch (Exception e) {
+                log.error("Failed to sync blocks {} to {}", current, batchEnd, e);
+                current = batchEnd.add(BigInteger.ONE);
+            }
+        }
+
+        log.info("Completed sync from block {} to {}", startBlock, endBlock);
+    }
+
     private BigInteger getCurrentBlockNumber() {
         try {
             org.web3j.protocol.core.methods.response.EthBlockNumber blockNumber = web3j.ethBlockNumber().send();
@@ -493,8 +535,6 @@ public class EvidenceEventListener {
         }
     }
 
-    
-    
     public void shutdown() {
         log.info("Shutting down EvidenceEventListener...");
 
