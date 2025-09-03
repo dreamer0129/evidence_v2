@@ -29,7 +29,6 @@ import cn.edu.gfkd.evidence.entity.SyncStatus;
 import cn.edu.gfkd.evidence.event.BlockchainEventReceived;
 import cn.edu.gfkd.evidence.exception.BlockchainException;
 import cn.edu.gfkd.evidence.generated.EvidenceStorageContract;
-import cn.edu.gfkd.evidence.generated.EvidenceStorageContract.Evidence;
 import cn.edu.gfkd.evidence.repository.BlockchainEventRepository;
 import cn.edu.gfkd.evidence.repository.SyncStatusRepository;
 import lombok.RequiredArgsConstructor;
@@ -74,24 +73,6 @@ public class EvidenceEventListener {
 
     public String getContractAddress() {
         return evidenceStorageContract.getContractAddress();
-    }
-
-    public Evidence getEvidence(String evidenceId) {
-        try {
-            // Call the smart contract and get the raw response
-            Evidence evidence = evidenceStorageContract.getEvidence(evidenceId).send();
-
-            if (evidence == null || !evidence.exists) {
-                log.warn("Evidence {} does not exist in smart contract", evidenceId);
-                return null;
-            }
-
-            return evidence;
-        } catch (Exception e) {
-            log.error("Failed to get evidence {} from smart contract: {}", evidenceId,
-                    e.getMessage());
-            throw new BlockchainException("Failed to get evidence from smart contract", e);
-        }
     }
 
     @Transactional

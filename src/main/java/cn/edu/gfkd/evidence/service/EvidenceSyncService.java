@@ -1,19 +1,11 @@
 package cn.edu.gfkd.evidence.service;
 
-import cn.edu.gfkd.evidence.entity.BlockchainEvent;
-import cn.edu.gfkd.evidence.entity.EvidenceEntity;
-import cn.edu.gfkd.evidence.entity.SyncStatus;
-import cn.edu.gfkd.evidence.event.BlockchainEventReceived;
-import cn.edu.gfkd.evidence.exception.EvidenceNotFoundException;
-import cn.edu.gfkd.evidence.exception.SyncException;
-import cn.edu.gfkd.evidence.repository.BlockchainEventRepository;
-import cn.edu.gfkd.evidence.repository.EvidenceRepository;
-import cn.edu.gfkd.evidence.repository.SyncStatusRepository;
-import cn.edu.gfkd.evidence.generated.EvidenceStorageContract;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.math.BigInteger;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
@@ -22,16 +14,23 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.web3j.utils.Numeric;
 
-import java.math.BigInteger;
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-@Service
-@RequiredArgsConstructor
-@Transactional
-@Slf4j
+import cn.edu.gfkd.evidence.entity.BlockchainEvent;
+import cn.edu.gfkd.evidence.entity.EvidenceEntity;
+import cn.edu.gfkd.evidence.entity.SyncStatus;
+import cn.edu.gfkd.evidence.event.BlockchainEventReceived;
+import cn.edu.gfkd.evidence.exception.EvidenceNotFoundException;
+import cn.edu.gfkd.evidence.exception.SyncException;
+import cn.edu.gfkd.evidence.generated.EvidenceStorageContract;
+import cn.edu.gfkd.evidence.repository.BlockchainEventRepository;
+import cn.edu.gfkd.evidence.repository.EvidenceRepository;
+import cn.edu.gfkd.evidence.repository.SyncStatusRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Service @RequiredArgsConstructor @Transactional @Slf4j
 public class EvidenceSyncService {
 
     private final EvidenceRepository evidenceRepository;
@@ -39,14 +38,14 @@ public class EvidenceSyncService {
     private final SyncStatusRepository syncStatusRepository;
     private final EvidenceEventListener blockchainEventListener;
     private final ObjectMapper objectMapper;
+    private final EvidenceStorageContract evidenceStorageContract;
 
     private void logEventProcessing(BlockchainEventReceived event, String action) {
-        log.info("{} blockchain event: {} for evidenceId: {}",
-                action, event.getEventName(), event.getParameters().get("evidenceId"));
+        log.info("{} blockchain event: {} for evidenceId: {}", action, event.getEventName(),
+                event.getParameters().get("evidenceId"));
     }
 
-    @EventListener
-    @Async
+    @EventListener @Async
     public void handleBlockchainEvent(BlockchainEventReceived event) {
         try {
             logEventProcessing(event, "Processing");
@@ -108,7 +107,9 @@ public class EvidenceSyncService {
                 return completeEvidence;
             }
         } catch (Exception e) {
-            log.warn("Failed to get complete evidence from contract, falling back to event data: {}", e.getMessage());
+            log.warn(
+                    "Failed to get complete evidence from contract, falling back to event data: {}",
+                    e.getMessage());
         }
 
         // Fallback to event-only data if contract call fails
@@ -117,7 +118,8 @@ public class EvidenceSyncService {
 
     private EvidenceEntity getCompleteEvidenceFromContract(String evidenceId) {
         try {
-            EvidenceStorageContract.Evidence contractEvidence = blockchainEventListener.getEvidence(evidenceId);
+            EvidenceStorageContract.Evidence contractEvidence = evidenceStorageContract
+                    .getEvidence(evidenceId).send();
 
             if (contractEvidence != null && contractEvidence.exists) {
                 return new EvidenceEntity(
@@ -125,36 +127,41 @@ public class EvidenceSyncService {
                         contractEvidence.userId != null ? contractEvidence.userId : "",
                         contractEvidence.metadata != null ? contractEvidence.metadata.fileName : "",
                         contractEvidence.metadata != null ? contractEvidence.metadata.mimeType : "",
-                        contractEvidence.metadata != null ? contractEvidence.metadata.size.longValue() : 0L,
-                        contractEvidence.metadata != null ? contractEvidence.metadata.size : BigInteger.ZERO,
+                        contractEvidence.metadata != null
+                                ? contractEvidence.metadata.size.longValue()
+                                : 0L,
+                        contractEvidence.metadata != null ? contractEvidence.metadata.size
+                                : BigInteger.ZERO,
                         contractEvidence.hash != null ? contractEvidence.hash.algorithm : "SHA256",
-                        contractEvidence.hash != null ? Numeric.toHexString(contractEvidence.hash.value) : "",
-                        contractEvidence.blockHeight != null ? contractEvidence.blockHeight : BigInteger.ZERO,
+                        contractEvidence.hash != null
+                                ? Numeric.toHexString(contractEvidence.hash.value)
+                                : "",
+                        contractEvidence.blockHeight != null ? contractEvidence.blockHeight
+                                : BigInteger.ZERO,
                         "", // transactionHash will be set by caller
-                        contractEvidence.timestamp != null ? contractEvidence.timestamp : BigInteger.ZERO, // blockTimestamp
-                                                                                                           // // caller
+                        contractEvidence.timestamp != null ? contractEvidence.timestamp
+                                : BigInteger.ZERO, // blockTimestamp
+                                                   // // caller
                         contractEvidence.memo != null ? contractEvidence.memo : "");
             }
         } catch (Exception e) {
-            log.warn("Failed to retrieve evidence {} from smart contract: {}", evidenceId, e.getMessage());
+            log.warn("Failed to retrieve evidence {} from smart contract: {}", evidenceId,
+                    e.getMessage());
         }
         return null;
     }
 
     private EvidenceEntity createEvidenceFromEventOnly(BlockchainEventReceived event) {
-        return new EvidenceEntity(
-                (String) event.getParameters().get("evidenceId"),
-                (String) event.getParameters().get("user"),
-                "", // fileName - would need to be fetched from contract
+        return new EvidenceEntity((String) event.getParameters().get("evidenceId"),
+                (String) event.getParameters().get("user"), "", // fileName - would need to be
+                                                                // fetched from contract
                 "", // mimeType - would need to be fetched from contract
                 0L, // fileSize - would need to be fetched from contract
                 (BigInteger) event.getParameters().getOrDefault("timestamp", BigInteger.ZERO),
                 "SHA256", // hashAlgorithm - default assumption
-                (String) event.getParameters().get("hashValue"),
-                event.getBlockNumber(),
-                event.getTransactionHash(),
-                event.getBlockTimestamp(),
-                "" // memo - would need to be fetched from contract
+                (String) event.getParameters().get("hashValue"), event.getBlockNumber(),
+                event.getTransactionHash(), event.getBlockTimestamp(), "" // memo - would need to be
+                                                                          // fetched from contract
         );
     }
 
@@ -178,8 +185,8 @@ public class EvidenceSyncService {
         String newStatus = (String) event.getParameters().get("newStatus");
         String oldStatus = (String) event.getParameters().get("oldStatus");
 
-        EvidenceEntity evidence = evidenceRepository.findByEvidenceId(evidenceId)
-                .orElseThrow(() -> new EvidenceNotFoundException("Evidence not found: " + evidenceId));
+        EvidenceEntity evidence = evidenceRepository.findByEvidenceId(evidenceId).orElseThrow(
+                () -> new EvidenceNotFoundException("Evidence not found: " + evidenceId));
 
         evidence.setStatus(newStatus);
 
@@ -189,16 +196,16 @@ public class EvidenceSyncService {
         }
 
         evidenceRepository.save(evidence);
-        log.info("Updated evidence status from {} to {} for evidenceId: {}",
-                oldStatus, newStatus, evidenceId);
+        log.info("Updated evidence status from {} to {} for evidenceId: {}", oldStatus, newStatus,
+                evidenceId);
     }
 
     private void processEvidenceVerified(BlockchainEventReceived event) {
         String evidenceId = (String) event.getParameters().get("evidenceId");
         Boolean isValid = (Boolean) event.getParameters().get("isValid");
 
-        log.info("Evidence verified for evidenceId: {}, isValid: {}",
-                evidenceId, isValid != null ? isValid : "unknown");
+        log.info("Evidence verified for evidenceId: {}, isValid: {}", evidenceId,
+                isValid != null ? isValid : "unknown");
         // No need to store verification status as it's just a verification operation
     }
 
@@ -208,10 +215,11 @@ public class EvidenceSyncService {
 
         String evidenceId = evidenceIdObj instanceof byte[] ? new String((byte[]) evidenceIdObj)
                 : (String) evidenceIdObj;
-        String userAddress = revokerObj instanceof byte[] ? new String((byte[]) revokerObj) : (String) revokerObj;
+        String userAddress = revokerObj instanceof byte[] ? new String((byte[]) revokerObj)
+                : (String) revokerObj;
 
-        EvidenceEntity evidence = evidenceRepository.findByEvidenceId(evidenceId)
-                .orElseThrow(() -> new EvidenceNotFoundException("Evidence not found: " + evidenceId));
+        EvidenceEntity evidence = evidenceRepository.findByEvidenceId(evidenceId).orElseThrow(
+                () -> new EvidenceNotFoundException("Evidence not found: " + evidenceId));
 
         evidence.setStatus("revoked");
         evidence.setRevokedAt(LocalDateTime.now());
@@ -222,7 +230,8 @@ public class EvidenceSyncService {
     }
 
     protected void markEventAsProcessed(String transactionHash, BigInteger logIndex) {
-        List<BlockchainEvent> events = blockchainEventRepository.findByTransactionHash(transactionHash);
+        List<BlockchainEvent> events = blockchainEventRepository
+                .findByTransactionHash(transactionHash);
 
         for (BlockchainEvent event : events) {
             if (event.getLogIndex().equals(logIndex)) {
@@ -258,8 +267,8 @@ public class EvidenceSyncService {
     public void reprocessUnprocessedEvents() {
         log.info("Reprocessing unprocessed blockchain events...");
 
-        List<BlockchainEvent> unprocessedEvents = blockchainEventRepository.findUnprocessedEvents(
-                PageRequest.of(0, 100));
+        List<BlockchainEvent> unprocessedEvents = blockchainEventRepository
+                .findUnprocessedEvents(PageRequest.of(0, 100));
 
         for (BlockchainEvent event : unprocessedEvents) {
             try {
@@ -296,12 +305,9 @@ public class EvidenceSyncService {
             Map<String, Object> parameters = parseEventParameters(event);
 
             BlockchainEventReceived.Builder builder = BlockchainEventReceived.builder()
-                    .contractAddress(event.getContractAddress())
-                    .eventName(event.getEventName())
-                    .blockNumber(event.getBlockNumber())
-                    .transactionHash(event.getTransactionHash())
-                    .logIndex(event.getLogIndex())
-                    .blockTimestamp(event.getBlockTimestamp())
+                    .contractAddress(event.getContractAddress()).eventName(event.getEventName())
+                    .blockNumber(event.getBlockNumber()).transactionHash(event.getTransactionHash())
+                    .logIndex(event.getLogIndex()).blockTimestamp(event.getBlockTimestamp())
                     .rawData(event.getRawData());
 
             parameters.forEach(builder::parameter);
@@ -309,7 +315,8 @@ public class EvidenceSyncService {
             return builder.build();
 
         } catch (Exception e) {
-            log.error("Failed to parse event data for transaction: {}", event.getTransactionHash(), e);
+            log.error("Failed to parse event data for transaction: {}", event.getTransactionHash(),
+                    e);
             return null;
         }
     }
@@ -336,14 +343,16 @@ public class EvidenceSyncService {
                         break;
                 }
             } catch (Exception e) {
-                log.error("Failed to parse event parameters for event: {}", event.getEventName(), e);
+                log.error("Failed to parse event parameters for event: {}", event.getEventName(),
+                        e);
             }
         }
 
         return parameters;
     }
 
-    private void parseEvidenceSubmittedParameters(JsonNode rootNode, Map<String, Object> parameters) {
+    private void parseEvidenceSubmittedParameters(JsonNode rootNode,
+            Map<String, Object> parameters) {
         extractParameter(rootNode, "evidenceId", parameters);
         extractParameter(rootNode, "user", parameters);
         extractParameter(rootNode, "hashValue", parameters);
@@ -353,13 +362,15 @@ public class EvidenceSyncService {
         }
     }
 
-    private void parseEvidenceStatusChangedParameters(JsonNode rootNode, Map<String, Object> parameters) {
+    private void parseEvidenceStatusChangedParameters(JsonNode rootNode,
+            Map<String, Object> parameters) {
         extractParameter(rootNode, "evidenceId", parameters);
         extractParameter(rootNode, "oldStatus", parameters);
         extractParameter(rootNode, "newStatus", parameters);
     }
 
-    private void parseEvidenceVerifiedParameters(JsonNode rootNode, Map<String, Object> parameters) {
+    private void parseEvidenceVerifiedParameters(JsonNode rootNode,
+            Map<String, Object> parameters) {
         extractParameter(rootNode, "evidenceId", parameters);
 
         if (rootNode.has("isValid")) {
@@ -372,7 +383,8 @@ public class EvidenceSyncService {
         extractParameter(rootNode, "revoker", parameters);
     }
 
-    private void extractParameter(JsonNode rootNode, String paramName, Map<String, Object> parameters) {
+    private void extractParameter(JsonNode rootNode, String paramName,
+            Map<String, Object> parameters) {
         if (rootNode.has(paramName)) {
             JsonNode paramNode = rootNode.get(paramName);
             if (paramNode.isArray()) {

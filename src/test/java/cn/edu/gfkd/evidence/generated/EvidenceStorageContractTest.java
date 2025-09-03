@@ -28,9 +28,8 @@ public class EvidenceStorageContractTest {
         @Autowired
         private EvidenceStorageContract evidenceStorage;
 
-        @Test
-        @DisplayName("Test getEvidenceByHash function")
-        void testGetEvidence() throws Exception {
+        @Test @DisplayName("Test getEvidenceByHash function")
+        void testGetByHashEvidence() throws Exception {
                 // Generate random file name for testing
                 String testFileName = "test_file_" + System.currentTimeMillis() + ".txt";
 
@@ -41,17 +40,16 @@ public class EvidenceStorageContractTest {
                 byte[] testHash = new byte[32];
                 Random random = new Random(System.currentTimeMillis());
                 random.nextBytes(testHash);
-                EvidenceStorageContract.HashInfo hashInfo = new EvidenceStorageContract.HashInfo("SHA-256", testHash);
+                EvidenceStorageContract.HashInfo hashInfo = new EvidenceStorageContract.HashInfo(
+                                "SHA-256", testHash);
 
                 // First verify hash doesn't exist
                 Boolean hashExistsBefore = evidenceStorage.doesHashExist(testHash).send();
                 assertFalse(hashExistsBefore, "Hash should not exist before creation");
 
                 // Submit evidence using submitHashEvidence
-                TransactionReceipt receipt = evidenceStorage.submitHashEvidence(
-                                testFileName,
-                                hashInfo,
-                                "Test evidence for unit testing").send();
+                TransactionReceipt receipt = evidenceStorage.submitHashEvidence(testFileName,
+                                hashInfo, "Test evidence for unit testing").send();
 
                 assertNotNull(receipt, "Transaction receipt should not be null");
                 assertTrue(receipt.isStatusOK(), "Transaction should be successful");
@@ -61,7 +59,8 @@ public class EvidenceStorageContractTest {
                 assertTrue(hashExistsAfter, "Hash should exist after creation");
 
                 // Test getEvidenceByHash function
-                EvidenceStorageContract.Evidence evidence = evidenceStorage.getEvidenceByHash(testHash).send();
+                EvidenceStorageContract.Evidence evidence = evidenceStorage
+                                .getEvidenceByHash(testHash).send();
                 assertNotNull(evidence, "Retrieved evidence should not be null");
 
                 // Get the generated evidenceId from the event
@@ -74,30 +73,40 @@ public class EvidenceStorageContractTest {
 
                 // Verify evidence properties
                 assertEquals(generatedEvidenceId, evidence.evidenceId, "Evidence ID should match");
-                assertEquals(userAddress.toLowerCase(), evidence.userId.toLowerCase(), "User address should match");
+                assertEquals(userAddress.toLowerCase(), evidence.userId.toLowerCase(),
+                                "User address should match");
                 assertEquals(testFileName, evidence.metadata.fileName, "File name should match");
-                assertEquals("", evidence.metadata.mimeType, "MIME type should be empty for submitHashEvidence");
-                assertEquals(BigInteger.ZERO, evidence.metadata.size, "File size should be 0 for submitHashEvidence");
+                assertEquals("", evidence.metadata.mimeType,
+                                "MIME type should be empty for submitHashEvidence");
+                assertEquals(BigInteger.ZERO, evidence.metadata.size,
+                                "File size should be 0 for submitHashEvidence");
                 assertEquals("SHA-256", evidence.hash.algorithm, "Hash algorithm should match");
                 assertArrayEquals(testHash, evidence.hash.value, "Hash value should match");
                 assertTrue(evidence.exists, "Evidence should exist");
                 assertEquals("Test evidence for unit testing", evidence.memo, "Memo should match");
 
                 // Verify event data
-                assertEquals(userAddress.toLowerCase(), event.user.toLowerCase(), "Event user should match");
-                assertEquals(generatedEvidenceId, event.evidenceId, "Event evidence ID should match");
+                assertEquals(userAddress.toLowerCase(), event.user.toLowerCase(),
+                                "Event user should match");
+                assertEquals(generatedEvidenceId, event.evidenceId,
+                                "Event evidence ID should match");
                 assertArrayEquals(testHash, event.hashValue, "Event hash should match");
 
                 // Also verify that we can get evidence by the generated ID using getEvidence
-                EvidenceStorageContract.Evidence evidenceById = evidenceStorage.getEvidence(generatedEvidenceId).send();
+                EvidenceStorageContract.Evidence evidenceById = evidenceStorage
+                                .getEvidence(generatedEvidenceId).send();
                 assertNotNull(evidenceById, "Should be able to get evidence by ID");
-                assertEquals(evidence.evidenceId, evidenceById.evidenceId, "Same evidence should be returned");
-                assertArrayEquals(evidence.hash.value, evidenceById.hash.value, "Same hash should be returned");
+                assertEquals(evidence.evidenceId, evidenceById.evidenceId,
+                                "Same evidence should be returned");
+                assertArrayEquals(evidence.hash.value, evidenceById.hash.value,
+                                "Same hash should be returned");
 
                 Evidence evidence2 = evidenceStorage.getEvidence(generatedEvidenceId).send();
                 assertNotNull(evidence2, "Should be able to get evidence by ID");
-                assertEquals(evidence.evidenceId, evidence2.evidenceId, "Same evidence should be returned");
-                assertArrayEquals(evidence.hash.value, evidence2.hash.value, "Same hash should be returned");
+                assertEquals(evidence.evidenceId, evidence2.evidenceId,
+                                "Same evidence should be returned");
+                assertArrayEquals(evidence.hash.value, evidence2.hash.value,
+                                "Same hash should be returned");
 
                 System.out.println("Successfully created and retrieved evidence by hash");
                 System.out.println("Generated Evidence ID: " + generatedEvidenceId);
@@ -105,10 +114,12 @@ public class EvidenceStorageContractTest {
                 System.out.println("File: " + evidence.metadata.fileName);
                 System.out.println("Size: " + evidence.metadata.size + " bytes");
                 System.out.println("Hash: " + evidence.hash.algorithm);
+
+                Evidence evidence3 = evidenceStorage.getEvidence("EVID:1756911668:CN-1").send();
+                System.out.println(evidence3.evidenceId);
         }
 
-        @Test
-        @DisplayName("Test getTotalEvidenceCount function")
+        @Test @DisplayName("Test getTotalEvidenceCount function")
         void testGetTotalEvidenceCount() throws Exception {
                 // Get initial evidence count
                 BigInteger initialCount = evidenceStorage.getTotalEvidenceCount().send();
@@ -130,17 +141,16 @@ public class EvidenceStorageContractTest {
                 byte[] testHash = new byte[32];
                 Random random = new Random(System.currentTimeMillis() + 1); // Use different seed
                 random.nextBytes(testHash);
-                EvidenceStorageContract.HashInfo hashInfo = new EvidenceStorageContract.HashInfo("SHA-256", testHash);
+                EvidenceStorageContract.HashInfo hashInfo = new EvidenceStorageContract.HashInfo(
+                                "SHA-256", testHash);
 
                 // Verify hash doesn't exist before creation
                 Boolean hashExistsBefore = evidenceStorage.doesHashExist(testHash).send();
                 assertFalse(hashExistsBefore, "Hash should not exist before creation");
 
                 // Submit new evidence
-                TransactionReceipt receipt = evidenceStorage.submitHashEvidence(
-                                testFileName,
-                                hashInfo,
-                                "Test evidence for count verification").send();
+                TransactionReceipt receipt = evidenceStorage.submitHashEvidence(testFileName,
+                                hashInfo, "Test evidence for count verification").send();
 
                 assertNotNull(receipt, "Transaction receipt should not be null");
                 assertTrue(receipt.isStatusOK(), "Transaction should be successful");
@@ -163,19 +173,23 @@ public class EvidenceStorageContractTest {
                 String generatedEvidenceId = event.evidenceId;
 
                 // Retrieve and verify the created evidence by hash
-                EvidenceStorageContract.Evidence evidence = evidenceStorage.getEvidenceByHash(testHash).send();
+                EvidenceStorageContract.Evidence evidence = evidenceStorage
+                                .getEvidenceByHash(testHash).send();
                 assertNotNull(evidence, "Created evidence should be retrievable by hash");
                 assertEquals(generatedEvidenceId, evidence.evidenceId, "Evidence ID should match");
                 assertTrue(evidence.exists, "Evidence should exist");
 
                 // Also verify we can get it by the generated ID
-                EvidenceStorageContract.Evidence evidenceById = evidenceStorage.getEvidence(generatedEvidenceId).send();
+                EvidenceStorageContract.Evidence evidenceById = evidenceStorage
+                                .getEvidence(generatedEvidenceId).send();
                 assertNotNull(evidenceById, "Created evidence should be retrievable by ID");
-                assertEquals(generatedEvidenceId, evidenceById.evidenceId, "Evidence ID should match");
+                assertEquals(generatedEvidenceId, evidenceById.evidenceId,
+                                "Evidence ID should match");
 
                 System.out.println("Evidence count before creation: " + initialCount);
                 System.out.println("Evidence count after creation: " + newCount);
-                System.out.println("Successfully verified count increase for evidence: " + generatedEvidenceId);
+                System.out.println("Successfully verified count increase for evidence: "
+                                + generatedEvidenceId);
 
                 // Test that count remains consistent
                 BigInteger finalCount = evidenceStorage.getTotalEvidenceCount().send();
