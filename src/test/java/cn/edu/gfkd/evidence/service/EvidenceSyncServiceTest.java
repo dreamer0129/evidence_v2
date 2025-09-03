@@ -1,36 +1,36 @@
 package cn.edu.gfkd.evidence.service;
 
-import cn.edu.gfkd.evidence.entity.BlockchainEvent;
-import cn.edu.gfkd.evidence.entity.EvidenceEntity;
-import cn.edu.gfkd.evidence.entity.SyncStatus;
-import cn.edu.gfkd.evidence.event.BlockchainEventReceived;
-import cn.edu.gfkd.evidence.exception.EvidenceNotFoundException;
-import cn.edu.gfkd.evidence.exception.SyncException;
-import cn.edu.gfkd.evidence.repository.BlockchainEventRepository;
-import cn.edu.gfkd.evidence.repository.EvidenceRepository;
-import cn.edu.gfkd.evidence.repository.SyncStatusRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.math.BigInteger;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
-import java.math.BigInteger;
-import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import cn.edu.gfkd.evidence.entity.BlockchainEvent;
+import cn.edu.gfkd.evidence.entity.EvidenceEntity;
+import cn.edu.gfkd.evidence.entity.SyncStatus;
+import cn.edu.gfkd.evidence.event.BlockchainEventReceived;
+import cn.edu.gfkd.evidence.exception.SyncException;
+import cn.edu.gfkd.evidence.repository.BlockchainEventRepository;
+import cn.edu.gfkd.evidence.repository.EvidenceRepository;
+import cn.edu.gfkd.evidence.repository.SyncStatusRepository;
 
 @ExtendWith(MockitoExtension.class)
 class EvidenceSyncServiceTest {
@@ -60,7 +60,6 @@ class EvidenceSyncServiceTest {
 
         @BeforeEach
         void setUp() {
-                Map<String, Object> parameters = new HashMap<>();
                 testEvent = BlockchainEventReceived.builder()
                                 .contractAddress("0xContractAddress")
                                 .eventName("EvidenceSubmitted")

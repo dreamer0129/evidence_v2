@@ -1,4 +1,4 @@
-package cn.edu.gfkd.evidence.service;
+package cn.edu.gfkd.evidence.integration;
 
 import cn.edu.gfkd.evidence.entity.BlockchainEvent;
 import cn.edu.gfkd.evidence.entity.EvidenceEntity;
@@ -7,6 +7,9 @@ import cn.edu.gfkd.evidence.event.BlockchainEventReceived;
 import cn.edu.gfkd.evidence.repository.BlockchainEventRepository;
 import cn.edu.gfkd.evidence.repository.EvidenceRepository;
 import cn.edu.gfkd.evidence.repository.SyncStatusRepository;
+import cn.edu.gfkd.evidence.service.EvidenceEventListener;
+import cn.edu.gfkd.evidence.service.EvidenceSyncService;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

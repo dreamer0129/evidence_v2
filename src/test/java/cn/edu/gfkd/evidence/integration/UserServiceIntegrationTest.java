@@ -1,8 +1,10 @@
-package cn.edu.gfkd.evidence.service;
+package cn.edu.gfkd.evidence.integration;
 
 import cn.edu.gfkd.evidence.dto.UserRegistrationDto;
 import cn.edu.gfkd.evidence.entity.User;
 import cn.edu.gfkd.evidence.repository.UserRepository;
+import cn.edu.gfkd.evidence.service.UserService;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -155,7 +157,7 @@ class UserServiceIntegrationTest {
         registrationDto.setUsername("finduser");
         registrationDto.setEmail("find@example.com");
         registrationDto.setPassword("password123");
-        
+
         User savedUser = userService.registerUser(registrationDto);
 
         // When
@@ -183,7 +185,7 @@ class UserServiceIntegrationTest {
         registrationDto.setUsername("emailuser");
         registrationDto.setEmail("emailuser@example.com");
         registrationDto.setPassword("password123");
-        
+
         userService.registerUser(registrationDto);
 
         // When

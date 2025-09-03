@@ -1,7 +1,9 @@
-package cn.edu.gfkd.evidence.service;
+package cn.edu.gfkd.evidence.integration;
 
 import cn.edu.gfkd.evidence.entity.User;
 import cn.edu.gfkd.evidence.repository.UserRepository;
+import cn.edu.gfkd.evidence.service.UserDetailsServiceImpl;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
