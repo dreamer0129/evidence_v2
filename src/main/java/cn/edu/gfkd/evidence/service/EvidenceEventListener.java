@@ -19,6 +19,7 @@ import org.web3j.protocol.core.methods.request.EthFilter;
 import org.web3j.protocol.core.methods.response.EthBlock;
 import org.web3j.protocol.core.methods.response.EthLog;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
+import org.web3j.protocol.core.RemoteCall;
 import org.web3j.tx.gas.DefaultGasProvider;
 import org.web3j.utils.Numeric;
 
@@ -69,7 +70,7 @@ public class EvidenceEventListener {
             scheduler.schedule(this::startEventListening, 3, TimeUnit.SECONDS);
 
             // Schedule periodic sync checks
-            scheduler.scheduleAtFixedRate(this::checkAndSyncMissingEvents, 3, 30, TimeUnit.SECONDS);
+            scheduler.scheduleAtFixedRate(this::checkAndSyncMissingEvents, 3, 10, TimeUnit.SECONDS);
 
         } catch (Exception e) {
             log.error("Failed to initialize blockchain event listener", e);
@@ -103,6 +104,24 @@ public class EvidenceEventListener {
 
     public String getContractAddress() {
         return evidenceStorage.getContractAddress();
+    }
+
+    public EvidenceStorage.Evidence getEvidence(String evidenceId) {
+        try {
+            // Call the smart contract and get the raw response
+            RemoteCall<EvidenceStorage.Evidence> call = evidenceStorage.getEvidence(evidenceId);
+            EvidenceStorage.Evidence evidence = call.send();
+
+            if (evidence == null || !evidence.exists) {
+                log.warn("Evidence {} does not exist in smart contract", evidenceId);
+                return null;
+            }
+
+            return evidence;
+        } catch (Exception e) {
+            log.error("Failed to get evidence {} from smart contract: {}", evidenceId, e.getMessage());
+            throw new BlockchainException("Failed to get evidence from smart contract", e);
+        }
     }
 
     @Transactional
@@ -475,7 +494,7 @@ public class EvidenceEventListener {
             BigInteger lastSyncedBlock = syncStatus.getLastBlockNumber();
             BigInteger blocksBehind = currentBlock.subtract(lastSyncedBlock);
 
-            if (blocksBehind.compareTo(BigInteger.valueOf(1)) > 0) {
+            if (blocksBehind.compareTo(BigInteger.valueOf(0)) > 0) {
                 log.info("Detected {} blocks behind. Triggering sync...", blocksBehind);
 
                 BigInteger startBlock = lastSyncedBlock.add(BigInteger.ONE);
