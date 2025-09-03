@@ -1,6 +1,6 @@
 package cn.edu.gfkd.evidence.service;
 
-import cn.edu.gfkd.evidence.entity.Evidence;
+import cn.edu.gfkd.evidence.entity.EvidenceEntity;
 import cn.edu.gfkd.evidence.repository.EvidenceRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +31,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void createEvidence_ValidEvidence_CreatesEvidenceSuccessfully() {
         // Given
-        Evidence evidence = new Evidence(
+        EvidenceEntity evidence = new EvidenceEntity(
                 "EVID:1234567890:CN-001",
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
@@ -43,21 +43,21 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(100),
                 "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
                 BigInteger.valueOf(1234567890),
-                "Test evidence memo"
-        );
+                "Test evidence memo");
 
         // When
-        Evidence savedEvidence = evidenceService.createEvidence(evidence);
+        EvidenceEntity savedEvidence = evidenceService.createEvidence(evidence);
 
         // Then
         assertThat(savedEvidence).isNotNull();
         assertThat(savedEvidence.getId()).isNotNull();
         assertThat(savedEvidence.getEvidenceId()).isEqualTo("EVID:1234567890:CN-001");
         assertThat(savedEvidence.getUserAddress()).isEqualTo("0x1234567890123456789012345678901234567890");
-        assertThat(savedEvidence.getHashValue()).isEqualTo("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
+        assertThat(savedEvidence.getHashValue())
+                .isEqualTo("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
 
         // Verify evidence is persisted in database
-        Evidence foundEvidence = evidenceRepository.findById(savedEvidence.getId()).orElse(null);
+        EvidenceEntity foundEvidence = evidenceRepository.findById(savedEvidence.getId()).orElse(null);
         assertThat(foundEvidence).isNotNull();
         assertThat(foundEvidence.getEvidenceId()).isEqualTo("EVID:1234567890:CN-001");
     }
@@ -73,7 +73,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void createEvidence_EmptyEvidenceId_ThrowsException() {
         // Given
-        Evidence evidence = new Evidence(
+        EvidenceEntity evidence = new EvidenceEntity(
                 "",
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
@@ -85,8 +85,7 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(100),
                 "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
                 BigInteger.valueOf(1234567890),
-                "Test evidence memo"
-        );
+                "Test evidence memo");
 
         // When & Then
         assertThatThrownBy(() -> evidenceService.createEvidence(evidence))
@@ -97,7 +96,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void createEvidence_EmptyUserAddress_ThrowsException() {
         // Given
-        Evidence evidence = new Evidence(
+        EvidenceEntity evidence = new EvidenceEntity(
                 "EVID:1234567890:CN-001",
                 "",
                 "test_file.pdf",
@@ -109,8 +108,7 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(100),
                 "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
                 BigInteger.valueOf(1234567890),
-                "Test evidence memo"
-        );
+                "Test evidence memo");
 
         // When & Then
         assertThatThrownBy(() -> evidenceService.createEvidence(evidence))
@@ -121,7 +119,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void createEvidence_EmptyHashValue_ThrowsException() {
         // Given
-        Evidence evidence = new Evidence(
+        EvidenceEntity evidence = new EvidenceEntity(
                 "EVID:1234567890:CN-001",
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
@@ -133,8 +131,7 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(100),
                 "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
                 BigInteger.valueOf(1234567890),
-                "Test evidence memo"
-        );
+                "Test evidence memo");
 
         // When & Then
         assertThatThrownBy(() -> evidenceService.createEvidence(evidence))
@@ -145,7 +142,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void getEvidenceById_ExistingEvidence_ReturnsEvidence() {
         // Given
-        Evidence evidence = new Evidence(
+        EvidenceEntity evidence = new EvidenceEntity(
                 "EVID:1234567890:CN-001",
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
@@ -157,9 +154,8 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(100),
                 "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
                 BigInteger.valueOf(1234567890),
-                "Test evidence memo"
-        );
-        Evidence savedEvidence = evidenceRepository.save(evidence);
+                "Test evidence memo");
+        EvidenceEntity savedEvidence = evidenceRepository.save(evidence);
 
         // When
         var foundEvidence = evidenceService.getEvidenceById(savedEvidence.getId());
@@ -181,7 +177,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void getEvidenceByEvidenceId_ExistingEvidence_ReturnsEvidence() {
         // Given
-        Evidence evidence = new Evidence(
+        EvidenceEntity evidence = new EvidenceEntity(
                 "EVID:1234567890:CN-001",
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
@@ -193,8 +189,7 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(100),
                 "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
                 BigInteger.valueOf(1234567890),
-                "Test evidence memo"
-        );
+                "Test evidence memo");
         evidenceRepository.save(evidence);
 
         // When
@@ -218,8 +213,8 @@ class EvidenceServiceIntegrationTest {
     void getEvidenceByUserAddress_ExistingUser_ReturnsEvidenceList() {
         // Given
         String userAddress = "0x1234567890123456789012345678901234567890";
-        
-        Evidence evidence1 = new Evidence(
+
+        EvidenceEntity evidence1 = new EvidenceEntity(
                 "EVID:1234567890:CN-001",
                 userAddress,
                 "test_file.pdf",
@@ -231,10 +226,9 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(100),
                 "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
                 BigInteger.valueOf(1234567890),
-                "Test evidence memo"
-        );
-        
-        Evidence evidence2 = new Evidence(
+                "Test evidence memo");
+
+        EvidenceEntity evidence2 = new EvidenceEntity(
                 "EVID:1234567891:CN-002",
                 userAddress,
                 "test_image.jpg",
@@ -246,14 +240,13 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(101),
                 "0x0987654321fedcba0987654321fedcba0987654321fedcba0987654321fedcba",
                 BigInteger.valueOf(1234567891),
-                "Test image evidence"
-        );
-        
+                "Test image evidence");
+
         evidenceRepository.save(evidence1);
         evidenceRepository.save(evidence2);
 
         // When
-        List<Evidence> evidenceList = evidenceService.getEvidenceByUserAddress(userAddress);
+        List<EvidenceEntity> evidenceList = evidenceService.getEvidenceByUserAddress(userAddress);
 
         // Then
         assertThat(evidenceList).hasSize(2);
@@ -263,7 +256,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void getEvidenceByUserAddress_NonExistingUser_ReturnsEmptyList() {
         // When
-        List<Evidence> evidenceList = evidenceService.getEvidenceByUserAddress("0xNonExistingAddress");
+        List<EvidenceEntity> evidenceList = evidenceService.getEvidenceByUserAddress("0xNonExistingAddress");
 
         // Then
         assertThat(evidenceList).isEmpty();
@@ -274,8 +267,8 @@ class EvidenceServiceIntegrationTest {
         // Given
         String userAddress = "0x1234567890123456789012345678901234567890";
         Pageable pageable = PageRequest.of(0, 10);
-        
-        Evidence evidence1 = new Evidence(
+
+        EvidenceEntity evidence1 = new EvidenceEntity(
                 "EVID:1234567890:CN-001",
                 userAddress,
                 "test_file.pdf",
@@ -287,13 +280,12 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(100),
                 "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
                 BigInteger.valueOf(1234567890),
-                "Test evidence memo"
-        );
-        
+                "Test evidence memo");
+
         evidenceRepository.save(evidence1);
 
         // When
-        Page<Evidence> evidencePage = evidenceService.getEvidenceByUserAddress(userAddress, pageable);
+        Page<EvidenceEntity> evidencePage = evidenceService.getEvidenceByUserAddress(userAddress, pageable);
 
         // Then
         assertThat(evidencePage).isNotNull();
@@ -304,7 +296,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void existsByEvidenceId_ExistingEvidence_ReturnsTrue() {
         // Given
-        Evidence evidence = new Evidence(
+        EvidenceEntity evidence = new EvidenceEntity(
                 "EVID:1234567890:CN-001",
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
@@ -316,8 +308,7 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(100),
                 "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
                 BigInteger.valueOf(1234567890),
-                "Test evidence memo"
-        );
+                "Test evidence memo");
         evidenceRepository.save(evidence);
 
         // When
@@ -340,8 +331,8 @@ class EvidenceServiceIntegrationTest {
     void countByUserAddress_ExistingUser_ReturnsCount() {
         // Given
         String userAddress = "0x1234567890123456789012345678901234567890";
-        
-        Evidence evidence1 = new Evidence(
+
+        EvidenceEntity evidence1 = new EvidenceEntity(
                 "EVID:1234567890:CN-001",
                 userAddress,
                 "test_file.pdf",
@@ -353,10 +344,9 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(100),
                 "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
                 BigInteger.valueOf(1234567890),
-                "Test evidence memo"
-        );
-        
-        Evidence evidence2 = new Evidence(
+                "Test evidence memo");
+
+        EvidenceEntity evidence2 = new EvidenceEntity(
                 "EVID:1234567891:CN-002",
                 userAddress,
                 "test_image.jpg",
@@ -368,9 +358,8 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(101),
                 "0x0987654321fedcba0987654321fedcba0987654321fedcba0987654321fedcba",
                 BigInteger.valueOf(1234567891),
-                "Test image evidence"
-        );
-        
+                "Test image evidence");
+
         evidenceRepository.save(evidence1);
         evidenceRepository.save(evidence2);
 
@@ -393,7 +382,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void updateEvidence_ValidEvidence_UpdatesEvidence() {
         // Given
-        Evidence evidence = new Evidence(
+        EvidenceEntity evidence = new EvidenceEntity(
                 "EVID:1234567890:CN-001",
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
@@ -405,19 +394,18 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(100),
                 "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
                 BigInteger.valueOf(1234567890),
-                "Test evidence memo"
-        );
-        Evidence savedEvidence = evidenceRepository.save(evidence);
+                "Test evidence memo");
+        EvidenceEntity savedEvidence = evidenceRepository.save(evidence);
         savedEvidence.setStatus("verified");
 
         // When
-        Evidence updatedEvidence = evidenceService.updateEvidence(savedEvidence);
+        EvidenceEntity updatedEvidence = evidenceService.updateEvidence(savedEvidence);
 
         // Then
         assertThat(updatedEvidence.getStatus()).isEqualTo("verified");
-        
+
         // Verify in database
-        Evidence foundEvidence = evidenceRepository.findById(savedEvidence.getId()).orElse(null);
+        EvidenceEntity foundEvidence = evidenceRepository.findById(savedEvidence.getId()).orElse(null);
         assertThat(foundEvidence).isNotNull();
         assertThat(foundEvidence.getStatus()).isEqualTo("verified");
     }
@@ -425,7 +413,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void deleteEvidence_ExistingEvidence_DeletesEvidence() {
         // Given
-        Evidence evidence = new Evidence(
+        EvidenceEntity evidence = new EvidenceEntity(
                 "EVID:1234567890:CN-001",
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
@@ -437,9 +425,8 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(100),
                 "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
                 BigInteger.valueOf(1234567890),
-                "Test evidence memo"
-        );
-        Evidence savedEvidence = evidenceRepository.save(evidence);
+                "Test evidence memo");
+        EvidenceEntity savedEvidence = evidenceRepository.save(evidence);
 
         // When
         evidenceService.deleteEvidence(savedEvidence.getId());
@@ -459,7 +446,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void deleteEvidenceByEvidenceId_ExistingEvidence_DeletesEvidence() {
         // Given
-        Evidence evidence = new Evidence(
+        EvidenceEntity evidence = new EvidenceEntity(
                 "EVID:1234567890:CN-001",
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
@@ -471,8 +458,7 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(100),
                 "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
                 BigInteger.valueOf(1234567890),
-                "Test evidence memo"
-        );
+                "Test evidence memo");
         evidenceRepository.save(evidence);
 
         // When
@@ -493,7 +479,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void count_ReturnsTotalCount() {
         // Given
-        Evidence evidence1 = new Evidence(
+        EvidenceEntity evidence1 = new EvidenceEntity(
                 "EVID:1234567890:CN-001",
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
@@ -505,10 +491,9 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(100),
                 "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
                 BigInteger.valueOf(1234567890),
-                "Test evidence memo"
-        );
-        
-        Evidence evidence2 = new Evidence(
+                "Test evidence memo");
+
+        EvidenceEntity evidence2 = new EvidenceEntity(
                 "EVID:1234567891:CN-002",
                 "0x0987654321098765432109876543210987654321",
                 "test_image.jpg",
@@ -520,9 +505,8 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(101),
                 "0x0987654321fedcba0987654321fedcba0987654321fedcba0987654321fedcba",
                 BigInteger.valueOf(1234567891),
-                "Test image evidence"
-        );
-        
+                "Test image evidence");
+
         evidenceRepository.save(evidence1);
         evidenceRepository.save(evidence2);
 

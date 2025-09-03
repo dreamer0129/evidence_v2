@@ -105,8 +105,7 @@ public class EvidenceEventListener {
     public EvidenceStorage.Evidence getEvidence(String evidenceId) {
         try {
             // Call the smart contract and get the raw response
-            RemoteCall<EvidenceStorage.Evidence> call = evidenceStorage.getEvidence(evidenceId);
-            EvidenceStorage.Evidence evidence = call.send();
+            EvidenceStorage.Evidence evidence = evidenceStorage.getEvidence(evidenceId).send();
 
             if (evidence == null || !evidence.exists) {
                 log.warn("Evidence {} does not exist in smart contract", evidenceId);

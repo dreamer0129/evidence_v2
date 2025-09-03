@@ -1,7 +1,7 @@
 package cn.edu.gfkd.evidence.service;
 
 import cn.edu.gfkd.evidence.entity.BlockchainEvent;
-import cn.edu.gfkd.evidence.entity.Evidence;
+import cn.edu.gfkd.evidence.entity.EvidenceEntity;
 import cn.edu.gfkd.evidence.entity.SyncStatus;
 import cn.edu.gfkd.evidence.event.BlockchainEventReceived;
 import cn.edu.gfkd.evidence.exception.EvidenceNotFoundException;
@@ -89,17 +89,17 @@ public class EvidenceSyncService {
             return;
         }
 
-        Evidence evidence = createEvidenceFromEvent(event);
+        EvidenceEntity evidence = createEvidenceFromEvent(event);
         evidence.setStatus("effective");
 
         evidenceRepository.save(evidence);
         log.info("Created new evidence record for evidenceId: {}", evidenceId);
     }
 
-    private Evidence createEvidenceFromEvent(BlockchainEventReceived event) {
+    private EvidenceEntity createEvidenceFromEvent(BlockchainEventReceived event) {
         try {
             // First try to get complete evidence data from smart contract
-            Evidence completeEvidence = getCompleteEvidenceFromContract(
+            EvidenceEntity completeEvidence = getCompleteEvidenceFromContract(
                     (String) event.getParameters().get("evidenceId"));
 
             if (completeEvidence != null) {
@@ -115,12 +115,12 @@ public class EvidenceSyncService {
         return createEvidenceFromEventOnly(event);
     }
 
-    private Evidence getCompleteEvidenceFromContract(String evidenceId) {
+    private EvidenceEntity getCompleteEvidenceFromContract(String evidenceId) {
         try {
             EvidenceStorage.Evidence contractEvidence = blockchainEventListener.getEvidence(evidenceId);
 
             if (contractEvidence != null && contractEvidence.exists) {
-                return new Evidence(
+                return new EvidenceEntity(
                         contractEvidence.evidenceId != null ? contractEvidence.evidenceId : "",
                         contractEvidence.userId != null ? contractEvidence.userId : "",
                         contractEvidence.metadata != null ? contractEvidence.metadata.fileName : "",
@@ -141,8 +141,8 @@ public class EvidenceSyncService {
         return null;
     }
 
-    private Evidence createEvidenceFromEventOnly(BlockchainEventReceived event) {
-        return new Evidence(
+    private EvidenceEntity createEvidenceFromEventOnly(BlockchainEventReceived event) {
+        return new EvidenceEntity(
                 (String) event.getParameters().get("evidenceId"),
                 (String) event.getParameters().get("user"),
                 "", // fileName - would need to be fetched from contract
@@ -178,7 +178,7 @@ public class EvidenceSyncService {
         String newStatus = (String) event.getParameters().get("newStatus");
         String oldStatus = (String) event.getParameters().get("oldStatus");
 
-        Evidence evidence = evidenceRepository.findByEvidenceId(evidenceId)
+        EvidenceEntity evidence = evidenceRepository.findByEvidenceId(evidenceId)
                 .orElseThrow(() -> new EvidenceNotFoundException("Evidence not found: " + evidenceId));
 
         evidence.setStatus(newStatus);
@@ -210,7 +210,7 @@ public class EvidenceSyncService {
                 : (String) evidenceIdObj;
         String userAddress = revokerObj instanceof byte[] ? new String((byte[]) revokerObj) : (String) revokerObj;
 
-        Evidence evidence = evidenceRepository.findByEvidenceId(evidenceId)
+        EvidenceEntity evidence = evidenceRepository.findByEvidenceId(evidenceId)
                 .orElseThrow(() -> new EvidenceNotFoundException("Evidence not found: " + evidenceId));
 
         evidence.setStatus("revoked");

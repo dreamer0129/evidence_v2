@@ -1,7 +1,7 @@
 package cn.edu.gfkd.evidence.service;
 
 import cn.edu.gfkd.evidence.entity.BlockchainEvent;
-import cn.edu.gfkd.evidence.entity.Evidence;
+import cn.edu.gfkd.evidence.entity.EvidenceEntity;
 import cn.edu.gfkd.evidence.entity.SyncStatus;
 import cn.edu.gfkd.evidence.event.BlockchainEventReceived;
 import cn.edu.gfkd.evidence.repository.BlockchainEventRepository;
@@ -17,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigInteger;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -67,9 +66,9 @@ class EvidenceSyncServiceIntegrationTest {
                 evidenceSyncService.reprocessUnprocessedEvents();
 
                 // Then
-                List<Evidence> evidenceList = evidenceRepository.findAll();
+                List<EvidenceEntity> evidenceList = evidenceRepository.findAll();
                 assertThat(evidenceList).hasSize(1);
-                Evidence savedEvidence = evidenceList.get(0);
+                EvidenceEntity savedEvidence = evidenceList.get(0);
                 assertThat(savedEvidence.getEvidenceId()).isEqualTo("EVID:1234567890:CN-001");
                 assertThat(savedEvidence.getUserAddress()).isEqualTo("0x1234567890123456789012345678901234567890");
                 assertThat(savedEvidence.getHashValue())
@@ -86,7 +85,7 @@ class EvidenceSyncServiceIntegrationTest {
         @Test
         void handleBlockchainEvent_EvidenceAlreadyExists_DoesNotCreateDuplicate() {
                 // Given
-                Evidence existingEvidence = new Evidence(
+                EvidenceEntity existingEvidence = new EvidenceEntity(
                                 "EVID:1234567890:CN-001",
                                 "0x1234567890123456789012345678901234567890",
                                 "test_file.pdf",
@@ -124,7 +123,7 @@ class EvidenceSyncServiceIntegrationTest {
                 evidenceSyncService.handleBlockchainEvent(event);
 
                 // Then
-                List<Evidence> evidenceList = evidenceRepository.findAll();
+                List<EvidenceEntity> evidenceList = evidenceRepository.findAll();
                 assertThat(evidenceList).hasSize(1);
                 assertThat(evidenceList.get(0).getEvidenceId()).isEqualTo("EVID:1234567890:CN-001");
         }
@@ -134,7 +133,7 @@ class EvidenceSyncServiceIntegrationTest {
                 // Given
                 when(evidenceEventListener.getContractAddress()).thenReturn("0xContractAddress");
 
-                Evidence existingEvidence = new Evidence(
+                EvidenceEntity existingEvidence = new EvidenceEntity(
                                 "EVID:1234567890:CN-001",
                                 "0x1234567890123456789012345678901234567890",
                                 "test_file.pdf",
@@ -170,7 +169,8 @@ class EvidenceSyncServiceIntegrationTest {
                 evidenceSyncService.reprocessUnprocessedEvents();
 
                 // Then
-                Evidence updatedEvidence = evidenceRepository.findByEvidenceId("EVID:1234567890:CN-001").orElse(null);
+                EvidenceEntity updatedEvidence = evidenceRepository.findByEvidenceId("EVID:1234567890:CN-001")
+                                .orElse(null);
                 assertThat(updatedEvidence).isNotNull();
                 assertThat(updatedEvidence.getStatus()).isEqualTo("verified");
 
@@ -186,7 +186,7 @@ class EvidenceSyncServiceIntegrationTest {
                 // Given
                 when(evidenceEventListener.getContractAddress()).thenReturn("0xContractAddress");
 
-                Evidence existingEvidence = new Evidence(
+                EvidenceEntity existingEvidence = new EvidenceEntity(
                                 "EVID:1234567890:CN-001",
                                 "0x1234567890123456789012345678901234567890",
                                 "test_file.pdf",
@@ -222,7 +222,8 @@ class EvidenceSyncServiceIntegrationTest {
                 evidenceSyncService.reprocessUnprocessedEvents();
 
                 // Then
-                Evidence updatedEvidence = evidenceRepository.findByEvidenceId("EVID:1234567890:CN-001").orElse(null);
+                EvidenceEntity updatedEvidence = evidenceRepository.findByEvidenceId("EVID:1234567890:CN-001")
+                                .orElse(null);
                 assertThat(updatedEvidence).isNotNull();
                 assertThat(updatedEvidence.getStatus()).isEqualTo("revoked");
                 assertThat(updatedEvidence.getRevokerAddress()).isNotNull();
@@ -265,7 +266,7 @@ class EvidenceSyncServiceIntegrationTest {
                 blockchainEventRepository.save(recentEvent);
 
                 // Create evidence with high block number
-                Evidence evidence = new Evidence(
+                EvidenceEntity evidence = new EvidenceEntity(
                                 "EVID:1234567890:CN-001",
                                 "0x1234567890123456789012345678901234567890",
                                 "test_file.pdf",
