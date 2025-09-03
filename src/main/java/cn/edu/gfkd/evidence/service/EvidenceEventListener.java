@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -59,6 +60,7 @@ public class EvidenceEventListener {
 
     private EvidenceStorage evidenceStorage;
     private ScheduledExecutorService scheduler;
+    private final AtomicBoolean syncInProgress = new AtomicBoolean(false);
 
     public void init() {
         scheduler = Executors.newScheduledThreadPool(2);
@@ -69,8 +71,8 @@ public class EvidenceEventListener {
             // Start event listening after a delay
             scheduler.schedule(this::startEventListening, 3, TimeUnit.SECONDS);
 
-            // Schedule periodic sync checks
-            scheduler.scheduleAtFixedRate(this::checkAndSyncMissingEvents, 3, 10, TimeUnit.SECONDS);
+            // Schedule periodic sync checks with adaptive timing
+            scheduler.scheduleAtFixedRate(this::checkAndSyncMissingEvents, 5, 15, TimeUnit.SECONDS);
 
         } catch (Exception e) {
             log.error("Failed to initialize blockchain event listener", e);
@@ -463,8 +465,8 @@ public class EvidenceEventListener {
             BigInteger blocksBehind = currentBlock.subtract(lastSyncedBlock);
             if (blocksBehind.compareTo(BigInteger.TEN) > 0) {
                 log.info("Detected {} blocks behind current block. Syncing missing events...", blocksBehind);
-
-                syncInBatches(lastSyncedBlock.add(BigInteger.ONE), currentBlock, BigInteger.valueOf(1000));
+                
+                syncMissingEvents(lastSyncedBlock.add(BigInteger.ONE), currentBlock, BigInteger.valueOf(1000));
             }
 
         } catch (Exception e) {
@@ -473,6 +475,11 @@ public class EvidenceEventListener {
     }
 
     public void checkAndSyncMissingEvents() {
+        if (!syncInProgress.compareAndSet(false, true)) {
+            log.debug("Sync already in progress, skipping duplicate check");
+            return;
+        }
+
         try {
             if (!isBlockchainConnected()) {
                 log.warn("Blockchain node not connected. Skipping sync check.");
@@ -484,8 +491,8 @@ public class EvidenceEventListener {
                 log.warn("EvidenceStorage contract not loaded. Skipping sync check.");
                 return;
             }
+            
             SyncStatus syncStatus = syncStatusRepository.findById(evidenceStorage.getContractAddress()).orElse(null);
-
             if (syncStatus == null) {
                 log.warn("No sync status found. Skipping sync check.");
                 return;
@@ -496,49 +503,71 @@ public class EvidenceEventListener {
 
             if (blocksBehind.compareTo(BigInteger.valueOf(0)) > 0) {
                 log.info("Detected {} blocks behind. Triggering sync...", blocksBehind);
-
-                BigInteger startBlock = lastSyncedBlock.add(BigInteger.ONE);
-                BigInteger endBlock = startBlock.add(BigInteger.valueOf(99));
-
+                
+                // Use smaller batch size for periodic sync to prevent blocking
+                BigInteger batchSize = BigInteger.valueOf(50);
+                BigInteger endBlock = lastSyncedBlock.add(batchSize);
                 if (endBlock.compareTo(currentBlock) > 0) {
                     endBlock = currentBlock;
                 }
-
-                syncPastEvents(startBlock, endBlock);
+                
+                syncMissingEvents(lastSyncedBlock.add(BigInteger.ONE), endBlock, batchSize);
             }
 
         } catch (Exception e) {
             log.error("Failed to check and sync missing events", e);
+        } finally {
+            syncInProgress.set(false);
         }
     }
 
-    private void syncInBatches(BigInteger startBlock, BigInteger endBlock, BigInteger batchSize) {
-        BigInteger current = startBlock;
+    private void syncMissingEvents(BigInteger startBlock, BigInteger endBlock, BigInteger batchSize) {
+        if (!syncInProgress.compareAndSet(false, true)) {
+            log.debug("Sync already in progress, skipping duplicate sync for blocks {} to {}", startBlock, endBlock);
+            return;
+        }
 
-        while (current.compareTo(endBlock) <= 0) {
-            BigInteger batchEnd = current.add(batchSize).subtract(BigInteger.ONE);
-            if (batchEnd.compareTo(endBlock) > 0) {
-                batchEnd = endBlock;
-            }
+        try {
+            log.info("Starting sync of blocks {} to {} with batch size {}", startBlock, endBlock, batchSize);
+            BigInteger current = startBlock;
 
-            try {
-                syncPastEvents(current, batchEnd);
-                log.info("Synced blocks {} to {}", current, batchEnd);
-
-                current = batchEnd.add(BigInteger.ONE);
-                // Add small delay to avoid overwhelming the node
-                try {
-                    Thread.sleep(50);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    break;
+            while (current.compareTo(endBlock) <= 0) {
+                BigInteger batchEnd = current.add(batchSize).subtract(BigInteger.ONE);
+                if (batchEnd.compareTo(endBlock) > 0) {
+                    batchEnd = endBlock;
                 }
 
-            } catch (Exception e) {
-                log.error("Failed to sync blocks {} to {}", current, batchEnd, e);
-                current = batchEnd.add(BigInteger.ONE);
+                try {
+                    syncPastEvents(current, batchEnd);
+                    log.info("Synced blocks {} to {}", current, batchEnd);
+
+                    current = batchEnd.add(BigInteger.ONE);
+                    // Add small delay to avoid overwhelming the node
+                    try {
+                        Thread.sleep(50);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+
+                } catch (Exception e) {
+                    log.error("Failed to sync blocks {} to {}", current, batchEnd, e);
+                    current = batchEnd.add(BigInteger.ONE);
+                }
             }
+            
+            log.info("Completed sync from block {} to {}", startBlock, endBlock);
+        } catch (Exception e) {
+            log.error("Failed to sync missing events from {} to {}", startBlock, endBlock, e);
+        } finally {
+            syncInProgress.set(false);
         }
+    }
+
+    @Deprecated
+    private void syncInBatches(BigInteger startBlock, BigInteger endBlock, BigInteger batchSize) {
+        log.warn("syncInBatches is deprecated, use syncMissingEvents instead");
+        syncMissingEvents(startBlock, endBlock, batchSize);
     }
 
     private BigInteger getCurrentBlockNumber() {
