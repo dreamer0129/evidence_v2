@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameter;
 import org.web3j.protocol.core.DefaultBlockParameterName;
@@ -37,12 +38,19 @@ import lombok.extern.slf4j.Slf4j;
 @Service @RequiredArgsConstructor @Slf4j
 public class EvidenceEventListener {
 
+    // SQLite database lock retry configuration
+    private static final int MAX_DB_RETRIES = 3;
+    private static final long DB_RETRY_DELAY_MS = 100;
+
     private final Web3j web3j;
     private final BlockchainEventRepository blockchainEventRepository;
     private final SyncStatusRepository syncStatusRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
     private final EvidenceStorageContract evidenceStorageContract;
+
+    // Synchronization object for database operations
+    private final Object dbLock = new Object();
 
     @Value("${blockchain.node.timeout:5000}")
     private long nodeTimeout;
@@ -60,6 +68,45 @@ public class EvidenceEventListener {
             log.error("Failed to initialize blockchain event listener", e);
             throw new BlockchainException("Failed to initialize blockchain event listener", e);
         }
+    }
+
+    /**
+     * Helper method to execute database operations with retry logic for SQLite locks
+     */
+    private <T> T executeWithRetry(DbOperation<T> operation, String operationName) {
+        int attempt = 0;
+        Exception lastException = null;
+        
+        while (attempt < MAX_DB_RETRIES) {
+            try {
+                synchronized (dbLock) {
+                    return operation.execute();
+                }
+            } catch (Exception e) {
+                lastException = e;
+                attempt++;
+                
+                if (attempt < MAX_DB_RETRIES) {
+                    log.warn("Attempt {} failed for {}: {}. Retrying in {}ms...", 
+                            attempt, operationName, e.getMessage(), DB_RETRY_DELAY_MS);
+                    try {
+                        Thread.sleep(DB_RETRY_DELAY_MS);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new BlockchainException("Interrupted during retry for " + operationName, ie);
+                    }
+                } else {
+                    log.error("All {} attempts failed for {}: {}", MAX_DB_RETRIES, operationName, e.getMessage());
+                }
+            }
+        }
+        
+        throw new BlockchainException("Failed to execute " + operationName + " after " + MAX_DB_RETRIES + " attempts", lastException);
+    }
+    
+    @FunctionalInterface
+    private interface DbOperation<T> {
+        T execute() throws Exception;
     }
 
     private BigInteger getBlockTimestamp(BigInteger blockNumber) throws IOException {
@@ -170,9 +217,12 @@ public class EvidenceEventListener {
         try {
             BigInteger blockTimestamp = getBlockTimestamp(event.log.getBlockNumber());
 
-            BlockchainEvent blockchainEvent = createBlockchainEvent(event, "EvidenceSubmitted",
-                    blockTimestamp);
-            blockchainEventRepository.save(blockchainEvent);
+            executeWithRetry(() -> {
+                BlockchainEvent blockchainEvent = createBlockchainEvent(event, "EvidenceSubmitted",
+                        blockTimestamp);
+                blockchainEventRepository.save(blockchainEvent);
+                return null;
+            }, "save EvidenceSubmitted event");
 
             BlockchainEventReceived eventReceived = createEvidenceSubmittedEvent(event);
             eventPublisher.publishEvent(eventReceived);
@@ -189,9 +239,12 @@ public class EvidenceEventListener {
         try {
             BigInteger blockTimestamp = getBlockTimestamp(event.log.getBlockNumber());
 
-            BlockchainEvent blockchainEvent = createBlockchainEvent(event, "EvidenceStatusChanged",
-                    blockTimestamp);
-            blockchainEventRepository.save(blockchainEvent);
+            executeWithRetry(() -> {
+                BlockchainEvent blockchainEvent = createBlockchainEvent(event, "EvidenceStatusChanged",
+                        blockTimestamp);
+                blockchainEventRepository.save(blockchainEvent);
+                return null;
+            }, "save EvidenceStatusChanged event");
 
             BlockchainEventReceived eventReceived = createEvidenceStatusChangedEvent(event,
                     blockTimestamp);
@@ -209,9 +262,12 @@ public class EvidenceEventListener {
         try {
             BigInteger blockTimestamp = getBlockTimestamp(event.log.getBlockNumber());
 
-            BlockchainEvent blockchainEvent = createBlockchainEvent(event, "EvidenceVerified",
-                    blockTimestamp);
-            blockchainEventRepository.save(blockchainEvent);
+            executeWithRetry(() -> {
+                BlockchainEvent blockchainEvent = createBlockchainEvent(event, "EvidenceVerified",
+                        blockTimestamp);
+                blockchainEventRepository.save(blockchainEvent);
+                return null;
+            }, "save EvidenceVerified event");
 
             BlockchainEventReceived eventReceived = createEvidenceVerifiedEvent(event,
                     blockTimestamp);
@@ -229,9 +285,12 @@ public class EvidenceEventListener {
         try {
             BigInteger blockTimestamp = getBlockTimestamp(event.log.getBlockNumber());
 
-            BlockchainEvent blockchainEvent = createBlockchainEvent(event, "EvidenceRevoked",
-                    blockTimestamp);
-            blockchainEventRepository.save(blockchainEvent);
+            executeWithRetry(() -> {
+                BlockchainEvent blockchainEvent = createBlockchainEvent(event, "EvidenceRevoked",
+                        blockTimestamp);
+                blockchainEventRepository.save(blockchainEvent);
+                return null;
+            }, "save EvidenceRevoked event");
 
             BlockchainEventReceived eventReceived = createEvidenceRevokedEvent(event,
                     blockTimestamp);
@@ -315,24 +374,24 @@ public class EvidenceEventListener {
     }
 
     private void updateSyncStatus(BigInteger blockNumber) {
-        SyncStatus syncStatus = getOrCreateSyncStatus();
-        syncStatus.setLastBlockNumber(blockNumber);
-        syncStatus.setLastSyncTimestamp(LocalDateTime.now());
-        syncStatus.setSyncStatus("SYNCED");
-        syncStatusRepository.save(syncStatus);
+        executeWithRetry(() -> {
+            SyncStatus syncStatus = getOrCreateSyncStatus();
+            syncStatus.setLastBlockNumber(blockNumber);
+            syncStatus.setLastSyncTimestamp(LocalDateTime.now());
+            syncStatus.setSyncStatus("SYNCED");
+            syncStatusRepository.save(syncStatus);
+            return null;
+        }, "update sync status");
     }
 
     private SyncStatus getOrCreateSyncStatus() {
-        try {
+        return executeWithRetry(() -> {
             String contractAddress = evidenceStorageContract.getContractAddress();
             return syncStatusRepository.findById(contractAddress).orElseGet(() -> {
                 SyncStatus newStatus = new SyncStatus(contractAddress, BigInteger.ZERO);
                 return syncStatusRepository.save(newStatus);
             });
-        } catch (Exception e) {
-            log.error("Failed to get or create sync status", e);
-            throw new BlockchainException("Failed to get or create sync status", e);
-        }
+        }, "get or create sync status");
     }
 
     public void startEventListening() {
