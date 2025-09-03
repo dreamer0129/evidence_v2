@@ -156,8 +156,11 @@ public class EvidenceSyncService {
     }
 
     private void processEvidenceRevoked(BlockchainEventReceived event) {
-        String evidenceId = (String) event.getParameters().get("evidenceId");
-        String userAddress = (String) event.getParameters().get("user");
+        Object evidenceIdObj = event.getParameters().get("evidenceId");
+        Object revokerObj = event.getParameters().get("revoker");
+        
+        String evidenceId = evidenceIdObj instanceof byte[] ? new String((byte[]) evidenceIdObj) : (String) evidenceIdObj;
+        String userAddress = revokerObj instanceof byte[] ? new String((byte[]) revokerObj) : (String) revokerObj;
         
         Evidence evidence = evidenceRepository.findByEvidenceId(evidenceId)
             .orElseThrow(() -> new EvidenceNotFoundException("Evidence not found: " + evidenceId));
@@ -319,6 +322,7 @@ public class EvidenceSyncService {
 
     private void parseEvidenceRevokedParameters(JsonNode rootNode, Map<String, Object> parameters) {
         extractParameter(rootNode, "evidenceId", parameters);
+        extractParameter(rootNode, "revoker", parameters);
     }
 
     private void extractParameter(JsonNode rootNode, String paramName, Map<String, Object> parameters) {

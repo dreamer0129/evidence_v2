@@ -7,10 +7,6 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import org.bouncycastle.util.encoders.Hex;
-
-import org.bouncycastle.jcajce.provider.asymmetric.ec.SignatureSpi.ecNR;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -97,9 +93,12 @@ public class EvidenceEventListener {
     }
 
     private BigInteger getBlockTimestamp(BigInteger blockNumber) throws IOException {
-        EthBlock block = web3j.ethGetBlockByNumber(
+        EthBlock ethBlock = web3j.ethGetBlockByNumber(
                 DefaultBlockParameter.valueOf(blockNumber), false).send();
-        return block.getBlock().getTimestamp();
+        if (ethBlock.getBlock() == null) {
+            throw new BlockchainException("Block not found: " + blockNumber);
+        }
+        return ethBlock.getBlock().getTimestamp();
     }
 
     public String getContractAddress() {
@@ -143,8 +142,14 @@ public class EvidenceEventListener {
             // The actual object returned is of type Log which extends EthLog.Log
             org.web3j.protocol.core.methods.response.Log log = (org.web3j.protocol.core.methods.response.Log) logObj;
             String txHash = log.getTransactionHash();
+            if (txHash == null || txHash.isEmpty()) {
+                throw new BlockchainException("Transaction hash is null or empty");
+            }
             TransactionReceipt receipt = web3j.ethGetTransactionReceipt(txHash).send().getTransactionReceipt()
                     .orElseThrow(() -> new BlockchainException("Transaction receipt not found: " + txHash));
+            if (receipt == null) {
+                throw new BlockchainException("Transaction receipt is null for: " + txHash);
+            }
 
             processAllEventTypes(receipt);
         }
@@ -167,6 +172,15 @@ public class EvidenceEventListener {
             statusChangedEvents.forEach(this::processEvidenceStatusChanged);
         } catch (Exception e) {
             log.debug("No EvidenceStatusChanged events found in receipt");
+        }
+
+        // Process EvidenceVerified events
+        try {
+            List<EvidenceStorage.EvidenceVerifiedEventResponse> verifiedEvents = cn.edu.gfkd.evidence.generated.EvidenceStorage
+                    .getEvidenceVerifiedEvents(receipt);
+            verifiedEvents.forEach(this::processEvidenceVerified);
+        } catch (Exception e) {
+            log.debug("No EvidenceVerified events found in receipt");
         }
 
         // Process EvidenceRevoked events
@@ -212,6 +226,24 @@ public class EvidenceEventListener {
         } catch (Exception e) {
             log.error("Error processing EvidenceStatusChanged event", e);
             throw new BlockchainException("Failed to process EvidenceStatusChanged event", e);
+        }
+    }
+
+    private void processEvidenceVerified(
+            EvidenceStorage.EvidenceVerifiedEventResponse event) {
+        try {
+            BigInteger blockTimestamp = getBlockTimestamp(event.log.getBlockNumber());
+
+            BlockchainEvent blockchainEvent = createBlockchainEvent(event, "EvidenceVerified", blockTimestamp);
+            blockchainEventRepository.save(blockchainEvent);
+
+            BlockchainEventReceived eventReceived = createEvidenceVerifiedEvent(event, blockTimestamp);
+            eventPublisher.publishEvent(eventReceived);
+
+            log.info("EvidenceVerified event processed for evidenceId: {}", event.evidenceId);
+        } catch (Exception e) {
+            log.error("Error processing EvidenceVerified event", e);
+            throw new BlockchainException("Failed to process EvidenceVerified event", e);
         }
     }
 
@@ -289,6 +321,24 @@ public class EvidenceEventListener {
                 .build();
     }
 
+    private BlockchainEventReceived createEvidenceVerifiedEvent(
+            EvidenceStorage.EvidenceVerifiedEventResponse event,
+            BigInteger blockTimestamp) throws Exception {
+
+        return BlockchainEventReceived.builder()
+                .contractAddress(evidenceStorage.getContractAddress())
+                .eventName("EvidenceVerified")
+                .blockNumber(event.log.getBlockNumber())
+                .transactionHash(event.log.getTransactionHash())
+                .logIndex(BigInteger.valueOf(event.log.getLogIndex().longValue()))
+                .blockTimestamp(blockTimestamp)
+                .rawData(objectMapper.writeValueAsString(event))
+                .parameter("evidenceId", event.evidenceId)
+                .parameter("isValid", event.isValid)
+                .parameter("timestamp", event.timestamp)
+                .build();
+    }
+
     private BlockchainEventReceived createEvidenceRevokedEvent(
             EvidenceStorage.EvidenceRevokedEventResponse event,
             BigInteger blockTimestamp) throws Exception {
@@ -346,7 +396,7 @@ public class EvidenceEventListener {
         log.info("Starting real-time blockchain event listening...");
 
         evidenceStorage.evidenceSubmittedEventFlowable(
-                DefaultBlockParameterName.EARLIEST,
+                DefaultBlockParameterName.LATEST,
                 DefaultBlockParameterName.LATEST)
                 .subscribe(event -> {
                     try {
@@ -359,7 +409,7 @@ public class EvidenceEventListener {
                 });
 
         evidenceStorage.evidenceStatusChangedEventFlowable(
-                DefaultBlockParameterName.EARLIEST,
+                DefaultBlockParameterName.LATEST,
                 DefaultBlockParameterName.LATEST)
                 .subscribe(event -> {
                     try {
@@ -372,7 +422,7 @@ public class EvidenceEventListener {
                 });
 
         evidenceStorage.evidenceRevokedEventFlowable(
-                DefaultBlockParameterName.EARLIEST,
+                DefaultBlockParameterName.LATEST,
                 DefaultBlockParameterName.LATEST)
                 .subscribe(event -> {
                     try {
@@ -411,6 +461,10 @@ public class EvidenceEventListener {
             }
 
             BigInteger currentBlock = getCurrentBlockNumber();
+            if (evidenceStorage == null) {
+                log.warn("EvidenceStorage contract not loaded. Skipping sync check.");
+                return;
+            }
             SyncStatus syncStatus = syncStatusRepository.findById(evidenceStorage.getContractAddress()).orElse(null);
 
             if (syncStatus == null) {
@@ -453,7 +507,13 @@ public class EvidenceEventListener {
                 log.info("Synced blocks {} to {}", current, batchEnd);
 
                 current = batchEnd.add(BigInteger.ONE);
-                Thread.sleep(100);
+                // Add small delay to avoid overwhelming the node
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
 
             } catch (Exception e) {
                 log.error("Failed to sync blocks {} to {}", current, batchEnd, e);
@@ -464,7 +524,11 @@ public class EvidenceEventListener {
 
     private BigInteger getCurrentBlockNumber() {
         try {
-            return web3j.ethBlockNumber().send().getBlockNumber();
+            org.web3j.protocol.core.methods.response.EthBlockNumber blockNumber = web3j.ethBlockNumber().send();
+            if (blockNumber == null) {
+                throw new BlockchainException("Block number response is null");
+            }
+            return blockNumber.getBlockNumber();
         } catch (IOException e) {
             throw new BlockchainException("Failed to get current block number", e);
         }
