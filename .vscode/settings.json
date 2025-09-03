@@ -1,0 +1,49 @@
+{
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.compile.nullAnalysis.mode": "automatic",
+
+  // 全局格式化设置（可选）
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+
+  "[markdown]": {
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true
+  },
+
+  "editor.codeActionsOnSave": {
+    "source.fixAll.markdownlint": "explicit"
+  },
+
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[java]": {
+    "editor.defaultFormatter": "redhat.java",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  "java.project.importOnFirstCompletion": true,
+  "java.configurations.workspace": {
+    "importOrder": ["java", "javax", "org", "com"],
+    "organizeImports": "auto"
+  },
+  "java.saveActions.organizeImports": true,
+  "java.format.settings.url": ".vscode/java-formatter.xml",
+  "java.format.settings.profile": "GoogleStyle",
+  "java.debug.settings.onBuildFailureProceed": true
+}

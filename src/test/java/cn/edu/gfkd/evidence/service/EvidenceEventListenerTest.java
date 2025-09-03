@@ -11,8 +11,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.web3j.crypto.Credentials;
+import org.springframework.context.ApplicationEventPublisher;
 import org.web3j.protocol.Web3j;
+import cn.edu.gfkd.evidence.generated.EvidenceStorageContract;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -38,7 +39,10 @@ class EvidenceEventListenerTest {
     private ObjectMapper objectMapper;
 
     @Mock
-    private Credentials credentials;
+    private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private EvidenceStorageContract evidenceStorageContract;
 
     private EvidenceEventListener evidenceEventListener;
 
@@ -46,8 +50,11 @@ class EvidenceEventListenerTest {
 
     @BeforeEach
     void setUp() {
+        // Mock the contract address
+        lenient().when(evidenceStorageContract.getContractAddress()).thenReturn("0xContractAddress");
+        
         evidenceEventListener = new EvidenceEventListener(
-                web3j, blockchainEventRepository, syncStatusRepository, null, objectMapper, credentials);
+                web3j, blockchainEventRepository, syncStatusRepository, eventPublisher, objectMapper, evidenceStorageContract);
 
         testSyncStatus = new SyncStatus("0xContractAddress", BigInteger.valueOf(50));
     }
@@ -56,12 +63,9 @@ class EvidenceEventListenerTest {
     @DisplayName("Should handle blockchain connectivity check gracefully")
     void isBlockchainConnected_WhenWeb3jThrowsException_ShouldReturnFalse() throws Exception {
         // Arrange
-        lenient().when(web3j.ethBlockNumber()).thenThrow(new RuntimeException("Network error"));
+        lenient().when(web3j.ethGetLogs(any())).thenThrow(new RuntimeException("Network error"));
 
         // Act & Assert
-        // Since we can't access private methods easily, we'll test the behavior through
-        // public methods
-        // that depend on blockchain connectivity
         assertThrows(BlockchainException.class,
                 () -> evidenceEventListener.syncPastEvents(BigInteger.valueOf(50), BigInteger.valueOf(100)));
     }
@@ -120,7 +124,7 @@ class EvidenceEventListenerTest {
     void createEvidenceEventListener_WithValidParameters_ShouldSucceed() {
         // Act & Assert
         assertDoesNotThrow(() -> new EvidenceEventListener(
-                web3j, blockchainEventRepository, syncStatusRepository, null, objectMapper, credentials));
+                web3j, blockchainEventRepository, syncStatusRepository, eventPublisher, objectMapper, evidenceStorageContract));
     }
 
     @Test
@@ -128,7 +132,7 @@ class EvidenceEventListenerTest {
     void createEvidenceEventListener_WithNullWeb3j_ShouldSucceed() {
         // Act & Assert
         assertDoesNotThrow(() -> new EvidenceEventListener(
-                null, blockchainEventRepository, syncStatusRepository, null, objectMapper, credentials));
+                null, blockchainEventRepository, syncStatusRepository, eventPublisher, objectMapper, evidenceStorageContract));
     }
 
     @Test
@@ -136,7 +140,7 @@ class EvidenceEventListenerTest {
     void createEvidenceEventListener_WithNullRepositories_ShouldSucceed() {
         // Act & Assert
         assertDoesNotThrow(() -> new EvidenceEventListener(
-                web3j, null, null, null, objectMapper, credentials));
+                web3j, null, null, eventPublisher, objectMapper, evidenceStorageContract));
     }
 
     @Test
@@ -144,23 +148,23 @@ class EvidenceEventListenerTest {
     void createEvidenceEventListener_WithNullObjectMapper_ShouldSucceed() {
         // Act & Assert
         assertDoesNotThrow(() -> new EvidenceEventListener(
-                web3j, blockchainEventRepository, syncStatusRepository, null, null, credentials));
+                web3j, blockchainEventRepository, syncStatusRepository, eventPublisher, null, evidenceStorageContract));
     }
 
     @Test
-    @DisplayName("Should handle null Credentials gracefully")
-    void createEvidenceEventListener_WithNullCredentials_ShouldSucceed() {
+    @DisplayName("Should handle null eventPublisher gracefully")
+    void createEvidenceEventListener_WithNullEventPublisher_ShouldSucceed() {
         // Act & Assert
         assertDoesNotThrow(() -> new EvidenceEventListener(
-                web3j, blockchainEventRepository, syncStatusRepository, null, objectMapper, null));
+                web3j, blockchainEventRepository, syncStatusRepository, null, objectMapper, evidenceStorageContract));
     }
 
     @Test
-    @DisplayName("Should handle all null parameters gracefully")
-    void createEvidenceEventListener_WithAllNullParameters_ShouldSucceed() {
+    @DisplayName("Should handle null contract gracefully")
+    void createEvidenceEventListener_WithNullContract_ShouldSucceed() {
         // Act & Assert
         assertDoesNotThrow(() -> new EvidenceEventListener(
-                null, null, null, null, null, null));
+                web3j, blockchainEventRepository, syncStatusRepository, eventPublisher, objectMapper, null));
     }
 
     @Test

@@ -22,7 +22,7 @@ const deployEvidenceStorage: DeployFunction = async function (hre: HardhatRuntim
   const { deployer } = await hre.getNamedAccounts();
   const { deploy } = hre.deployments;
 
-  await deploy("EvidenceStorage", {
+  await deploy("EvidenceStorageContract", {
     from: deployer,
     // Contract constructor arguments - owner address
     args: [deployer],
@@ -33,8 +33,8 @@ const deployEvidenceStorage: DeployFunction = async function (hre: HardhatRuntim
   });
 
   // Get the deployed contract to interact with it after deploying.
-  const evidenceStorage = await hre.ethers.getContract<Contract>("EvidenceStorage", deployer);
-  console.log("📋 EvidenceStorage deployed!");
+  const evidenceStorage = await hre.ethers.getContract<Contract>("EvidenceStorageContract", deployer);
+  console.log("📋 EvidenceStorageContract deployed!");
   console.log("🔧 Owner address:", await evidenceStorage.owner());
   console.log("📊 Total evidence count:", await evidenceStorage.getTotalEvidenceCount());
 };
@@ -43,4 +43,4 @@ export default deployEvidenceStorage;
 
 // Tags are useful if you have multiple deploy files and only want to run one of them.
 // e.g. yarn deploy --tags EvidenceStorage
-deployEvidenceStorage.tags = ["EvidenceStorage"];
+deployEvidenceStorage.tags = ["EvidenceStorageContract"];

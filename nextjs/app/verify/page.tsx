@@ -33,13 +33,13 @@ const Verify: NextPage = () => {
   const [hashValue, setHashValue] = useState<string>("");
 
   const { data: isValid } = useScaffoldReadContract({
-    contractName: "EvidenceStorage",
+    contractName: "EvidenceStorageContract",
     functionName: "verifyEvidenceByHash",
     args: targetHash ? [targetHash] : ([] as any),
   });
 
   const { data: evidence } = useScaffoldReadContract({
-    contractName: "EvidenceStorage",
+    contractName: "EvidenceStorageContract",
     functionName: "getEvidenceByHash",
     args: targetHash ? [targetHash] : ([] as any),
   });

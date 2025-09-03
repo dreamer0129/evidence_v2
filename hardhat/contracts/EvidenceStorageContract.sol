@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  * Supports file hash storage, metadata management, and evidence verification
  * @author Evidence Storage Team
  */
-contract EvidenceStorage is Ownable, ReentrancyGuard {
+contract EvidenceStorageContract is Ownable, ReentrancyGuard {
     // Counter for evidence numbering
     uint256 private _evidenceCounter;
 

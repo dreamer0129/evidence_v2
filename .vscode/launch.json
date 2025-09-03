@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-EvidenceApplication<evidence>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "cn.edu.gfkd.evidence.EvidenceApplication",
+            "projectName": "evidence",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

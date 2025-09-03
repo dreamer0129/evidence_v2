@@ -27,7 +27,7 @@ export const useEvidenceDetails = (evidenceId: string | undefined) => {
     isLoading,
     error,
   } = useScaffoldReadContract({
-    contractName: "EvidenceStorage",
+    contractName: "EvidenceStorageContract",
     functionName: "getEvidence",
     args: evidenceId ? [evidenceId] : ([] as any),
     query: {

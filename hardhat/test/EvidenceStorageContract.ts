@@ -1,10 +1,10 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { EvidenceStorage } from "../typechain-types";
+import { EvidenceStorageContract } from "../typechain-types";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
-describe("EvidenceStorage", function () {
-  let evidenceStorage: EvidenceStorage;
+describe("EvidenceStorageContract", function () {
+  let evidenceStorage: EvidenceStorageContract;
   let owner: SignerWithAddress;
   let user1: SignerWithAddress;
   let user2: SignerWithAddress;
@@ -35,8 +35,8 @@ describe("EvidenceStorage", function () {
 
   before(async () => {
     [owner, user1, user2] = await ethers.getSigners();
-    const evidenceStorageFactory = await ethers.getContractFactory("EvidenceStorage");
-    evidenceStorage = (await evidenceStorageFactory.deploy(owner.address)) as EvidenceStorage;
+    const evidenceStorageFactory = await ethers.getContractFactory("EvidenceStorageContract");
+    evidenceStorage = (await evidenceStorageFactory.deploy(owner.address)) as EvidenceStorageContract;
     await evidenceStorage.waitForDeployment();
   });
 

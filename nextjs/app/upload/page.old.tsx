@@ -31,11 +31,11 @@ const Upload: NextPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { writeContractAsync: submitEvidence, isMining: isSubmittingEvidence } = useScaffoldWriteContract({
-    contractName: "EvidenceStorage",
+    contractName: "EvidenceStorageContract",
   });
 
   const { writeContractAsync: submitHashEvidence, isMining: isSubmittingHashEvidence } = useScaffoldWriteContract({
-    contractName: "EvidenceStorage",
+    contractName: "EvidenceStorageContract",
   });
 
   const handleFileUpload = async (files: File[]) => {

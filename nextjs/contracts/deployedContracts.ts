@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Counter: {
-      address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      address: "0x34B40BA116d5Dec75548a9e9A8f15411461E8c70",
       abi: [
         {
           inputs: [
@@ -68,10 +68,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1,
+      deployedOnBlock: 113,
     },
-    EvidenceStorage: {
-      address: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+    EvidenceStorageContract: {
+      address: "0xD0141E899a65C95a556fE2B27e5982A6DE7fDD7A",
       abi: [
         {
           inputs: [
@@ -419,7 +419,7 @@ const deployedContracts = {
                       type: "uint256",
                     },
                   ],
-                  internalType: "struct EvidenceStorage.FileMetadata",
+                  internalType: "struct EvidenceStorageContract.FileMetadata",
                   name: "metadata",
                   type: "tuple",
                 },
@@ -436,7 +436,7 @@ const deployedContracts = {
                       type: "bytes32",
                     },
                   ],
-                  internalType: "struct EvidenceStorage.HashInfo",
+                  internalType: "struct EvidenceStorageContract.HashInfo",
                   name: "hash",
                   type: "tuple",
                 },
@@ -466,7 +466,7 @@ const deployedContracts = {
                   type: "bool",
                 },
               ],
-              internalType: "struct EvidenceStorage.Evidence",
+              internalType: "struct EvidenceStorageContract.Evidence",
               name: "",
               type: "tuple",
             },
@@ -519,7 +519,7 @@ const deployedContracts = {
                       type: "uint256",
                     },
                   ],
-                  internalType: "struct EvidenceStorage.FileMetadata",
+                  internalType: "struct EvidenceStorageContract.FileMetadata",
                   name: "metadata",
                   type: "tuple",
                 },
@@ -536,7 +536,7 @@ const deployedContracts = {
                       type: "bytes32",
                     },
                   ],
-                  internalType: "struct EvidenceStorage.HashInfo",
+                  internalType: "struct EvidenceStorageContract.HashInfo",
                   name: "hash",
                   type: "tuple",
                 },
@@ -566,7 +566,7 @@ const deployedContracts = {
                   type: "bool",
                 },
               ],
-              internalType: "struct EvidenceStorage.Evidence",
+              internalType: "struct EvidenceStorageContract.Evidence",
               name: "",
               type: "tuple",
             },
@@ -664,7 +664,7 @@ const deployedContracts = {
                   type: "uint256",
                 },
               ],
-              internalType: "struct EvidenceStorage.FileMetadata",
+              internalType: "struct EvidenceStorageContract.FileMetadata",
               name: "metadata",
               type: "tuple",
             },
@@ -681,7 +681,7 @@ const deployedContracts = {
                   type: "bytes32",
                 },
               ],
-              internalType: "struct EvidenceStorage.HashInfo",
+              internalType: "struct EvidenceStorageContract.HashInfo",
               name: "hash",
               type: "tuple",
             },
@@ -722,7 +722,7 @@ const deployedContracts = {
                   type: "bytes32",
                 },
               ],
-              internalType: "struct EvidenceStorage.HashInfo",
+              internalType: "struct EvidenceStorageContract.HashInfo",
               name: "hash",
               type: "tuple",
             },
@@ -800,7 +800,7 @@ const deployedContracts = {
         renounceOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
       },
-      deployedOnBlock: 3,
+      deployedOnBlock: 115,
     },
   },
 } as const;

@@ -17,7 +17,7 @@ const History: NextPage = () => {
 
   // Fetch user's evidence IDs
   const { data: evidenceIds, isLoading: loadingIds } = useScaffoldReadContract({
-    contractName: "EvidenceStorage",
+    contractName: "EvidenceStorageContract",
     functionName: "getUserEvidences",
     args: [address],
   });
@@ -163,7 +163,7 @@ const History: NextPage = () => {
                             创建时间
                           </label>
                           <p className="mt-1 text-gray-900 dark:text-white font-medium">
-                            {Number(selectedEvidence.metadata.creationTime) > 1000000000000 
+                            {Number(selectedEvidence.metadata.creationTime) > 1000000000000
                               ? new Date(Number(selectedEvidence.metadata.creationTime)).toLocaleString("zh-CN")
                               : new Date(Number(selectedEvidence.metadata.creationTime) * 1000).toLocaleString("zh-CN")}
                           </p>
@@ -184,7 +184,7 @@ const History: NextPage = () => {
                             存证时间
                           </label>
                           <p className="mt-1 text-gray-900 dark:text-white font-medium">
-                            {Number(selectedEvidence.timestamp) > 1000000000000 
+                            {Number(selectedEvidence.timestamp) > 1000000000000
                               ? new Date(Number(selectedEvidence.timestamp)).toLocaleString("zh-CN")
                               : new Date(Number(selectedEvidence.timestamp) * 1000).toLocaleString("zh-CN")}
                           </p>

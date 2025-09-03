@@ -9,7 +9,7 @@ import cn.edu.gfkd.evidence.exception.SyncException;
 import cn.edu.gfkd.evidence.repository.BlockchainEventRepository;
 import cn.edu.gfkd.evidence.repository.EvidenceRepository;
 import cn.edu.gfkd.evidence.repository.SyncStatusRepository;
-import cn.edu.gfkd.evidence.generated.EvidenceStorage;
+import cn.edu.gfkd.evidence.generated.EvidenceStorageContract;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -117,7 +117,7 @@ public class EvidenceSyncService {
 
     private EvidenceEntity getCompleteEvidenceFromContract(String evidenceId) {
         try {
-            EvidenceStorage.Evidence contractEvidence = blockchainEventListener.getEvidence(evidenceId);
+            EvidenceStorageContract.Evidence contractEvidence = blockchainEventListener.getEvidence(evidenceId);
 
             if (contractEvidence != null && contractEvidence.exists) {
                 return new EvidenceEntity(

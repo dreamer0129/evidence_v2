@@ -1,69 +1,32 @@
 package cn.edu.gfkd.evidence.generated;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Random;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.web3j.crypto.Credentials;
-import org.web3j.crypto.WalletUtils;
-import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
-import org.web3j.protocol.http.HttpService;
-import org.web3j.tx.gas.ContractGasProvider;
-import org.web3j.tx.gas.StaticGasProvider;
 
-import cn.edu.gfkd.evidence.generated.EvidenceStorage.Evidence;
-import cn.edu.gfkd.evidence.utils.ContractUtils;
+import cn.edu.gfkd.evidence.generated.EvidenceStorageContract.Evidence;
 
-public class EvidenceStorageTest {
-        private static final String nodeUrl = System.getenv().getOrDefault("WEB3J_NODE_URL",
-                        "http://127.0.0.1:8545");
-        private static final String walletPassword = System.getenv().getOrDefault("WEB3J_WALLET_PASSWORD", "123456");
-        private static final String walletPath = System.getenv().getOrDefault("WEB3J_WALLET_PATH",
-                        "src/test/resources/wallet/testnet/keystore/hardhat-wallet0.json");
+@SpringBootTest
+public class EvidenceStorageContractTest {
 
-        private static Web3j web3j;
-        private static Credentials credentials;
-        private static EvidenceStorage evidenceStorage;
-        private static ContractGasProvider gasProvider;
-        private static String contractAddress;
+        @Autowired
+        private Credentials credentials;
 
-        @BeforeAll
-        static void setUp() throws Exception {
-                // Initialize web3j connection
-                web3j = Web3j.build(new HttpService(nodeUrl));
-
-                // Load credentials from wallet
-                credentials = WalletUtils.loadCredentials(walletPassword, walletPath);
-
-                // Set up gas provider with sufficient gas
-                gasProvider = new StaticGasProvider(BigInteger.valueOf(20_000_000_000L),
-                                BigInteger.valueOf(4_712_388L));
-
-                // Get deployed contract address
-                contractAddress = ContractUtils.getDeployedContractAddress("EvidenceStorage", "localhost");
-                assertNotNull(contractAddress, "Contract address should not be null");
-
-                // Load contract
-                evidenceStorage = EvidenceStorage.load(contractAddress, web3j, credentials, gasProvider);
-                assertNotNull(evidenceStorage, "EvidenceStorage contract should be loaded");
-
-                // Test contract by calling a method instead of isValid()
-                BigInteger testValue = evidenceStorage.getTotalEvidenceCount().send();
-                assertNotNull(testValue, "Should be able to call contract methods");
-        }
-
-        @AfterAll
-        static void tearDown() throws Exception {
-                if (web3j != null) {
-                        web3j.close();
-                }
-        }
+        @Autowired
+        private EvidenceStorageContract evidenceStorage;
 
         @Test
         @DisplayName("Test getEvidenceByHash function")
@@ -78,7 +41,7 @@ public class EvidenceStorageTest {
                 byte[] testHash = new byte[32];
                 Random random = new Random(System.currentTimeMillis());
                 random.nextBytes(testHash);
-                EvidenceStorage.HashInfo hashInfo = new EvidenceStorage.HashInfo("SHA-256", testHash);
+                EvidenceStorageContract.HashInfo hashInfo = new EvidenceStorageContract.HashInfo("SHA-256", testHash);
 
                 // First verify hash doesn't exist
                 Boolean hashExistsBefore = evidenceStorage.doesHashExist(testHash).send();
@@ -98,15 +61,15 @@ public class EvidenceStorageTest {
                 assertTrue(hashExistsAfter, "Hash should exist after creation");
 
                 // Test getEvidenceByHash function
-                EvidenceStorage.Evidence evidence = evidenceStorage.getEvidenceByHash(testHash).send();
+                EvidenceStorageContract.Evidence evidence = evidenceStorage.getEvidenceByHash(testHash).send();
                 assertNotNull(evidence, "Retrieved evidence should not be null");
 
                 // Get the generated evidenceId from the event
-                List<EvidenceStorage.EvidenceSubmittedEventResponse> events = EvidenceStorage
+                List<EvidenceStorageContract.EvidenceSubmittedEventResponse> events = EvidenceStorageContract
                                 .getEvidenceSubmittedEvents(receipt);
                 assertEquals(1, events.size(), "Should have one EvidenceSubmitted event");
 
-                EvidenceStorage.EvidenceSubmittedEventResponse event = events.get(0);
+                EvidenceStorageContract.EvidenceSubmittedEventResponse event = events.get(0);
                 String generatedEvidenceId = event.evidenceId;
 
                 // Verify evidence properties
@@ -126,7 +89,7 @@ public class EvidenceStorageTest {
                 assertArrayEquals(testHash, event.hashValue, "Event hash should match");
 
                 // Also verify that we can get evidence by the generated ID using getEvidence
-                EvidenceStorage.Evidence evidenceById = evidenceStorage.getEvidence(generatedEvidenceId).send();
+                EvidenceStorageContract.Evidence evidenceById = evidenceStorage.getEvidence(generatedEvidenceId).send();
                 assertNotNull(evidenceById, "Should be able to get evidence by ID");
                 assertEquals(evidence.evidenceId, evidenceById.evidenceId, "Same evidence should be returned");
                 assertArrayEquals(evidence.hash.value, evidenceById.hash.value, "Same hash should be returned");
@@ -167,7 +130,7 @@ public class EvidenceStorageTest {
                 byte[] testHash = new byte[32];
                 Random random = new Random(System.currentTimeMillis() + 1); // Use different seed
                 random.nextBytes(testHash);
-                EvidenceStorage.HashInfo hashInfo = new EvidenceStorage.HashInfo("SHA-256", testHash);
+                EvidenceStorageContract.HashInfo hashInfo = new EvidenceStorageContract.HashInfo("SHA-256", testHash);
 
                 // Verify hash doesn't exist before creation
                 Boolean hashExistsBefore = evidenceStorage.doesHashExist(testHash).send();
@@ -192,21 +155,21 @@ public class EvidenceStorageTest {
                 assertTrue(hashExistsAfter, "Hash should exist after creation");
 
                 // Get the generated evidenceId from the event
-                List<EvidenceStorage.EvidenceSubmittedEventResponse> events = EvidenceStorage
+                List<EvidenceStorageContract.EvidenceSubmittedEventResponse> events = EvidenceStorageContract
                                 .getEvidenceSubmittedEvents(receipt);
                 assertEquals(1, events.size(), "Should have one EvidenceSubmitted event");
 
-                EvidenceStorage.EvidenceSubmittedEventResponse event = events.get(0);
+                EvidenceStorageContract.EvidenceSubmittedEventResponse event = events.get(0);
                 String generatedEvidenceId = event.evidenceId;
 
                 // Retrieve and verify the created evidence by hash
-                EvidenceStorage.Evidence evidence = evidenceStorage.getEvidenceByHash(testHash).send();
+                EvidenceStorageContract.Evidence evidence = evidenceStorage.getEvidenceByHash(testHash).send();
                 assertNotNull(evidence, "Created evidence should be retrievable by hash");
                 assertEquals(generatedEvidenceId, evidence.evidenceId, "Evidence ID should match");
                 assertTrue(evidence.exists, "Evidence should exist");
 
                 // Also verify we can get it by the generated ID
-                EvidenceStorage.Evidence evidenceById = evidenceStorage.getEvidence(generatedEvidenceId).send();
+                EvidenceStorageContract.Evidence evidenceById = evidenceStorage.getEvidence(generatedEvidenceId).send();
                 assertNotNull(evidenceById, "Created evidence should be retrievable by ID");
                 assertEquals(generatedEvidenceId, evidenceById.evidenceId, "Evidence ID should match");
 
