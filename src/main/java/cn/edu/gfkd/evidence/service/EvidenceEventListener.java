@@ -28,6 +28,7 @@ import cn.edu.gfkd.evidence.entity.SyncStatus;
 import cn.edu.gfkd.evidence.event.BlockchainEventReceived;
 import cn.edu.gfkd.evidence.exception.BlockchainException;
 import cn.edu.gfkd.evidence.generated.EvidenceStorage;
+import cn.edu.gfkd.evidence.generated.EvidenceStorage.Evidence;
 import cn.edu.gfkd.evidence.repository.BlockchainEventRepository;
 import cn.edu.gfkd.evidence.repository.SyncStatusRepository;
 import cn.edu.gfkd.evidence.utils.ContractUtils;
@@ -104,7 +105,7 @@ public class EvidenceEventListener {
     public EvidenceStorage.Evidence getEvidence(String evidenceId) {
         try {
             // Call the smart contract and get the raw response
-            EvidenceStorage.Evidence evidence = evidenceStorage.getEvidence(evidenceId).send();
+            Evidence evidence = evidenceStorage.getEvidence(evidenceId).send();
 
             if (evidence == null || !evidence.exists) {
                 log.warn("Evidence {} does not exist in smart contract", evidenceId);
