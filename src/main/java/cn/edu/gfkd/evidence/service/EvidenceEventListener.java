@@ -9,9 +9,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.web3j.utils.Numeric;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameter;
 import org.web3j.protocol.core.DefaultBlockParameterName;
@@ -25,11 +26,13 @@ import org.web3j.utils.Numeric;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import cn.edu.gfkd.evidence.entity.BlockchainEvent;
+import cn.edu.gfkd.evidence.entity.EvidenceEntity;
 import cn.edu.gfkd.evidence.entity.SyncStatus;
-import cn.edu.gfkd.evidence.event.BlockchainEventReceived;
 import cn.edu.gfkd.evidence.exception.BlockchainException;
+import cn.edu.gfkd.evidence.exception.EvidenceNotFoundException;
 import cn.edu.gfkd.evidence.generated.EvidenceStorageContract;
 import cn.edu.gfkd.evidence.repository.BlockchainEventRepository;
+import cn.edu.gfkd.evidence.repository.EvidenceRepository;
 import cn.edu.gfkd.evidence.repository.SyncStatusRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,8 +46,8 @@ public class EvidenceEventListener {
 
     private final Web3j web3j;
     private final BlockchainEventRepository blockchainEventRepository;
+    private final EvidenceRepository evidenceRepository;
     private final SyncStatusRepository syncStatusRepository;
-    private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
     private final EvidenceStorageContract evidenceStorageContract;
 
@@ -57,7 +60,7 @@ public class EvidenceEventListener {
     private ScheduledExecutorService scheduler;
 
     public void init() {
-        scheduler = Executors.newScheduledThreadPool(2);
+        scheduler = Executors.newSingleThreadScheduledExecutor();
 
         try {
             // Start event listening after a delay
@@ -227,8 +230,9 @@ public class EvidenceEventListener {
                 return null;
             }, "save EvidenceSubmitted event");
 
-            BlockchainEventReceived eventReceived = createEvidenceSubmittedEvent(event);
-            eventPublisher.publishEvent(eventReceived);
+            // 直接处理证据提交事件
+            processEvidenceSubmittedSync(event.evidenceId, event.user, Numeric.toHexString(event.hashValue), 
+                    event.timestamp, event.log.getBlockNumber(), event.log.getTransactionHash(), blockTimestamp);
 
             log.info("EvidenceSubmitted event processed for evidenceId: {}", event.evidenceId);
         } catch (Exception e) {
@@ -249,9 +253,8 @@ public class EvidenceEventListener {
                 return null;
             }, "save EvidenceStatusChanged event");
 
-            BlockchainEventReceived eventReceived = createEvidenceStatusChangedEvent(event,
-                    blockTimestamp);
-            eventPublisher.publishEvent(eventReceived);
+            // 直接处理证据状态变更事件
+            processEvidenceStatusChangedSync(event.evidenceId, event.oldStatus, event.newStatus, null);
 
             log.info("EvidenceStatusChanged event processed for evidenceId: {}", event.evidenceId);
         } catch (Exception e) {
@@ -272,9 +275,8 @@ public class EvidenceEventListener {
                 return null;
             }, "save EvidenceVerified event");
 
-            BlockchainEventReceived eventReceived = createEvidenceVerifiedEvent(event,
-                    blockTimestamp);
-            eventPublisher.publishEvent(eventReceived);
+            // 直接处理证据验证事件
+            processEvidenceVerifiedSync(event.evidenceId, event.isValid);
 
             log.info("EvidenceVerified event processed for evidenceId: {}", event.evidenceId);
         } catch (Exception e) {
@@ -295,9 +297,8 @@ public class EvidenceEventListener {
                 return null;
             }, "save EvidenceRevoked event");
 
-            BlockchainEventReceived eventReceived = createEvidenceRevokedEvent(event,
-                    blockTimestamp);
-            eventPublisher.publishEvent(eventReceived);
+            // 直接处理证据撤销事件
+            processEvidenceRevokedSync(event.evidenceId, event.revoker);
 
             log.info("EvidenceRevoked event processed for evidenceId: {}", event.evidenceId);
         } catch (Exception e) {
@@ -317,63 +318,6 @@ public class EvidenceEventListener {
         return new BlockchainEvent(evidenceStorageContract.getContractAddress(), eventType,
                 log.getBlockNumber(), log.getTransactionHash(),
                 BigInteger.valueOf(log.getLogIndex().longValue()), blockTimestamp, rawData);
-    }
-
-    private BlockchainEventReceived createEvidenceSubmittedEvent(
-            EvidenceStorageContract.EvidenceSubmittedEventResponse event) throws Exception {
-
-        return BlockchainEventReceived.builder()
-                .contractAddress(evidenceStorageContract.getContractAddress())
-                .eventName("EvidenceSubmitted").blockNumber(event.log.getBlockNumber())
-                .transactionHash(event.log.getTransactionHash())
-                .logIndex(BigInteger.valueOf(event.log.getLogIndex().longValue()))
-                .blockTimestamp(event.timestamp).rawData(objectMapper.writeValueAsString(event))
-                .parameter("evidenceId", event.evidenceId).parameter("user", event.user)
-                .parameter("hashValue", Numeric.toHexString(event.hashValue))
-                .parameter("timestamp", event.timestamp).build();
-    }
-
-    private BlockchainEventReceived createEvidenceStatusChangedEvent(
-            EvidenceStorageContract.EvidenceStatusChangedEventResponse event,
-            BigInteger blockTimestamp) throws Exception {
-
-        return BlockchainEventReceived.builder()
-                .contractAddress(evidenceStorageContract.getContractAddress())
-                .eventName("EvidenceStatusChanged").blockNumber(event.log.getBlockNumber())
-                .transactionHash(event.log.getTransactionHash())
-                .logIndex(BigInteger.valueOf(event.log.getLogIndex().longValue()))
-                .blockTimestamp(blockTimestamp).rawData(objectMapper.writeValueAsString(event))
-                .parameter("evidenceId", event.evidenceId).parameter("oldStatus", event.oldStatus)
-                .parameter("newStatus", event.newStatus).parameter("timestamp", event.timestamp)
-                .build();
-    }
-
-    private BlockchainEventReceived createEvidenceVerifiedEvent(
-            EvidenceStorageContract.EvidenceVerifiedEventResponse event, BigInteger blockTimestamp)
-            throws Exception {
-
-        return BlockchainEventReceived.builder()
-                .contractAddress(evidenceStorageContract.getContractAddress())
-                .eventName("EvidenceVerified").blockNumber(event.log.getBlockNumber())
-                .transactionHash(event.log.getTransactionHash())
-                .logIndex(BigInteger.valueOf(event.log.getLogIndex().longValue()))
-                .blockTimestamp(blockTimestamp).rawData(objectMapper.writeValueAsString(event))
-                .parameter("evidenceId", event.evidenceId).parameter("isValid", event.isValid)
-                .parameter("timestamp", event.timestamp).build();
-    }
-
-    private BlockchainEventReceived createEvidenceRevokedEvent(
-            EvidenceStorageContract.EvidenceRevokedEventResponse event, BigInteger blockTimestamp)
-            throws Exception {
-
-        return BlockchainEventReceived.builder()
-                .contractAddress(evidenceStorageContract.getContractAddress())
-                .eventName("EvidenceRevoked").blockNumber(event.log.getBlockNumber())
-                .transactionHash(event.log.getTransactionHash())
-                .logIndex(BigInteger.valueOf(event.log.getLogIndex().longValue()))
-                .blockTimestamp(blockTimestamp).rawData(objectMapper.writeValueAsString(event))
-                .parameter("evidenceId", event.evidenceId).parameter("revoker", event.revoker)
-                .parameter("timestamp", event.timestamp).build();
     }
 
     private void updateSyncStatus(BigInteger blockNumber) {
@@ -559,5 +503,97 @@ public class EvidenceEventListener {
         }
 
         log.info("EvidenceEventListener shutdown completed");
+    }
+
+    // 同步处理方法实现
+    private void processEvidenceSubmittedSync(String evidenceId, String user, String hashValue, 
+            BigInteger timestamp, BigInteger blockNumber, String transactionHash, BigInteger blockTimestamp) {
+        executeWithRetry(() -> {
+            // 检查证据是否已存在
+            if (evidenceRepository.existsByEvidenceId(evidenceId)) {
+                log.info("Evidence {} already exists, skipping", evidenceId);
+                return null;
+            }
+
+            // 尝试从智能合约获取完整证据数据
+            EvidenceEntity evidence = getCompleteEvidenceFromContract(evidenceId);
+            if (evidence == null) {
+                // 如果合约调用失败，使用事件数据创建基本证据记录
+                evidence = new EvidenceEntity(evidenceId, user, "", "", 0L, timestamp, "SHA256", 
+                        hashValue, blockNumber, transactionHash, blockTimestamp, "");
+            } else {
+                // 更新区块链特定字段
+                evidence.setTransactionHash(transactionHash);
+            }
+
+            evidence.setStatus("effective");
+            evidenceRepository.save(evidence);
+            log.info("Created new evidence record for evidenceId: {}", evidenceId);
+            return null;
+        }, "processEvidenceSubmittedSync");
+    }
+
+    private void processEvidenceStatusChangedSync(String evidenceId, String oldStatus, String newStatus, String user) {
+        executeWithRetry(() -> {
+            EvidenceEntity evidence = evidenceRepository.findByEvidenceId(evidenceId)
+                    .orElseThrow(() -> new EvidenceNotFoundException("Evidence not found: " + evidenceId));
+
+            evidence.setStatus(newStatus);
+
+            if ("revoked".equals(newStatus) && user != null) {
+                evidence.setRevokedAt(LocalDateTime.now());
+                evidence.setRevokerAddress(user);
+            }
+
+            evidenceRepository.save(evidence);
+            log.info("Updated evidence status from {} to {} for evidenceId: {}", oldStatus, newStatus, evidenceId);
+            return null;
+        }, "processEvidenceStatusChangedSync");
+    }
+
+    private void processEvidenceVerifiedSync(String evidenceId, Boolean isValid) {
+        log.info("Evidence verified for evidenceId: {}, isValid: {}", evidenceId, isValid != null ? isValid : "unknown");
+        // 验证操作不需要存储状态，只是记录日志
+    }
+
+    private void processEvidenceRevokedSync(String evidenceId, String revoker) {
+        executeWithRetry(() -> {
+            EvidenceEntity evidence = evidenceRepository.findByEvidenceId(evidenceId)
+                    .orElseThrow(() -> new EvidenceNotFoundException("Evidence not found: " + evidenceId));
+
+            evidence.setStatus("revoked");
+            evidence.setRevokedAt(LocalDateTime.now());
+            evidence.setRevokerAddress(revoker);
+
+            evidenceRepository.save(evidence);
+            log.info("Revoked evidence for evidenceId: {}", evidenceId);
+            return null;
+        }, "processEvidenceRevokedSync");
+    }
+
+    private EvidenceEntity getCompleteEvidenceFromContract(String evidenceId) {
+        try {
+            EvidenceStorageContract.Evidence contractEvidence = evidenceStorageContract
+                    .getEvidence(evidenceId).send();
+
+            if (contractEvidence != null && contractEvidence.exists) {
+                return new EvidenceEntity(
+                        contractEvidence.evidenceId != null ? contractEvidence.evidenceId : "",
+                        contractEvidence.userId != null ? contractEvidence.userId : "",
+                        contractEvidence.metadata != null ? contractEvidence.metadata.fileName : "",
+                        contractEvidence.metadata != null ? contractEvidence.metadata.mimeType : "",
+                        contractEvidence.metadata != null ? contractEvidence.metadata.size.longValue() : 0L,
+                        contractEvidence.metadata != null ? contractEvidence.metadata.size : BigInteger.ZERO,
+                        contractEvidence.hash != null ? contractEvidence.hash.algorithm : "SHA256",
+                        contractEvidence.hash != null ? Numeric.toHexString(contractEvidence.hash.value) : "",
+                        contractEvidence.blockHeight != null ? contractEvidence.blockHeight : BigInteger.ZERO,
+                        "", // transactionHash will be set by caller
+                        contractEvidence.timestamp != null ? contractEvidence.timestamp : BigInteger.ZERO,
+                        contractEvidence.memo != null ? contractEvidence.memo : "");
+            }
+        } catch (Exception e) {
+            log.warn("Failed to retrieve evidence {} from smart contract: {}", evidenceId, e.getMessage());
+        }
+        return null;
     }
 }

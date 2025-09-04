@@ -6,14 +6,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.util.StringUtils;
 import org.web3j.utils.Numeric;
 
@@ -23,7 +18,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import cn.edu.gfkd.evidence.entity.BlockchainEvent;
 import cn.edu.gfkd.evidence.entity.EvidenceEntity;
 import cn.edu.gfkd.evidence.entity.SyncStatus;
-import cn.edu.gfkd.evidence.event.BlockchainEventReceived;
 import cn.edu.gfkd.evidence.exception.EvidenceNotFoundException;
 import cn.edu.gfkd.evidence.exception.SyncException;
 import cn.edu.gfkd.evidence.generated.EvidenceStorageContract;
@@ -43,265 +37,9 @@ public class EvidenceSyncService {
     private final ObjectMapper objectMapper;
     private final EvidenceStorageContract evidenceStorageContract;
 
-    private void logEventProcessing(BlockchainEventReceived event, String action) {
-        log.info("{} blockchain event: {} for evidenceId: {}", action, event.getEventName(),
-                event.getParameters().get("evidenceId"));
-    }
-
-    @EventListener @Async
-    @Retryable(value = {org.springframework.dao.CannotAcquireLockException.class, 
-                      org.hibernate.exception.LockAcquisitionException.class,
-                      org.sqlite.SQLiteException.class},
-               maxAttempts = 5,
-               backoff = @Backoff(delay = 100, multiplier = 2))
-    public void handleBlockchainEvent(BlockchainEventReceived event) {
-        try {
-            logEventProcessing(event, "Processing");
-
-            switch (event.getEventName()) {
-                case "EvidenceSubmitted":
-                    processEvidenceSubmitted(event);
-                    break;
-                case "EvidenceStatusChanged":
-                    processEvidenceStatusChanged(event);
-                    break;
-                case "EvidenceVerified":
-                    processEvidenceVerified(event);
-                    break;
-                case "EvidenceRevoked":
-                    processEvidenceRevoked(event);
-                    break;
-                default:
-                    log.warn("Unknown event type: {}", event.getEventName());
-            }
-
-            markEventAsProcessed(event.getTransactionHash(), event.getLogIndex());
-            updateSyncStatus(event.getBlockNumber());
-
-        } catch (Exception e) {
-            Object evidenceId = event.getParameters().get("evidenceId");
-            log.error("Failed to process blockchain event for evidenceId: {}",
-                    evidenceId != null ? evidenceId : "unknown", e);
-            throw new SyncException("Failed to process blockchain event", e);
-        }
-    }
-
-    @Transactional(isolation = Isolation.READ_COMMITTED)
-    @Retryable(value = {org.springframework.dao.CannotAcquireLockException.class, 
-                      org.hibernate.exception.LockAcquisitionException.class,
-                      org.sqlite.SQLiteException.class},
-               maxAttempts = 3,
-               backoff = @Backoff(delay = 50, multiplier = 1.5))
-    private void processEvidenceSubmitted(BlockchainEventReceived event) {
-        validateEventInput(event);
-
-        String evidenceId = (String) event.getParameters().get("evidenceId");
-
-        if (evidenceRepository.existsByEvidenceId(evidenceId)) {
-            log.info("Evidence {} already exists, skipping", evidenceId);
-            return;
-        }
-
-        EvidenceEntity evidence = createEvidenceFromEvent(event);
-        evidence.setStatus("effective");
-
-        evidenceRepository.save(evidence);
-        log.info("Created new evidence record for evidenceId: {}", evidenceId);
-    }
-
-    private EvidenceEntity createEvidenceFromEvent(BlockchainEventReceived event) {
-        try {
-            // First try to get complete evidence data from smart contract
-            EvidenceEntity completeEvidence = getCompleteEvidenceFromContract(
-                    (String) event.getParameters().get("evidenceId"));
-
-            if (completeEvidence != null) {
-                // Update blockchain-specific fields
-                completeEvidence.setTransactionHash(event.getTransactionHash());
-                return completeEvidence;
-            }
-        } catch (Exception e) {
-            log.warn(
-                    "Failed to get complete evidence from contract, falling back to event data: {}",
-                    e.getMessage());
-        }
-
-        // Fallback to event-only data if contract call fails
-        return createEvidenceFromEventOnly(event);
-    }
-
-    private EvidenceEntity getCompleteEvidenceFromContract(String evidenceId) {
-        try {
-            EvidenceStorageContract.Evidence contractEvidence = evidenceStorageContract
-                    .getEvidence(evidenceId).send();
-
-            if (contractEvidence != null && contractEvidence.exists) {
-                return new EvidenceEntity(
-                        contractEvidence.evidenceId != null ? contractEvidence.evidenceId : "",
-                        contractEvidence.userId != null ? contractEvidence.userId : "",
-                        contractEvidence.metadata != null ? contractEvidence.metadata.fileName : "",
-                        contractEvidence.metadata != null ? contractEvidence.metadata.mimeType : "",
-                        contractEvidence.metadata != null
-                                ? contractEvidence.metadata.size.longValue()
-                                : 0L,
-                        contractEvidence.metadata != null ? contractEvidence.metadata.size
-                                : BigInteger.ZERO,
-                        contractEvidence.hash != null ? contractEvidence.hash.algorithm : "SHA256",
-                        contractEvidence.hash != null
-                                ? Numeric.toHexString(contractEvidence.hash.value)
-                                : "",
-                        contractEvidence.blockHeight != null ? contractEvidence.blockHeight
-                                : BigInteger.ZERO,
-                        "", // transactionHash will be set by caller
-                        contractEvidence.timestamp != null ? contractEvidence.timestamp
-                                : BigInteger.ZERO, // blockTimestamp
-                                                   // // caller
-                        contractEvidence.memo != null ? contractEvidence.memo : "");
-            }
-        } catch (Exception e) {
-            log.warn("Failed to retrieve evidence {} from smart contract: {}", evidenceId,
-                    e.getMessage());
-        }
-        return null;
-    }
-
-    private EvidenceEntity createEvidenceFromEventOnly(BlockchainEventReceived event) {
-        return new EvidenceEntity((String) event.getParameters().get("evidenceId"),
-                (String) event.getParameters().get("user"), "", // fileName - would need to be
-                                                                // fetched from contract
-                "", // mimeType - would need to be fetched from contract
-                0L, // fileSize - would need to be fetched from contract
-                (BigInteger) event.getParameters().getOrDefault("timestamp", BigInteger.ZERO),
-                "SHA256", // hashAlgorithm - default assumption
-                (String) event.getParameters().get("hashValue"), event.getBlockNumber(),
-                event.getTransactionHash(), event.getBlockTimestamp(), "" // memo - would need to be
-                                                                          // fetched from contract
-        );
-    }
-
-    private void validateEventInput(BlockchainEventReceived event) {
-        if (event == null) {
-            throw new IllegalArgumentException("Event cannot be null");
-        }
-        if (!StringUtils.hasText((String) event.getParameters().get("evidenceId"))) {
-            throw new IllegalArgumentException("Evidence ID cannot be empty");
-        }
-        if (!StringUtils.hasText((String) event.getParameters().get("user"))) {
-            throw new IllegalArgumentException("User address cannot be empty");
-        }
-        if (!StringUtils.hasText((String) event.getParameters().get("hashValue"))) {
-            throw new IllegalArgumentException("Hash value cannot be empty");
-        }
-    }
-
-    @Transactional(isolation = Isolation.READ_COMMITTED)
-    @Retryable(value = {org.springframework.dao.CannotAcquireLockException.class, 
-                      org.hibernate.exception.LockAcquisitionException.class,
-                      org.sqlite.SQLiteException.class},
-               maxAttempts = 3,
-               backoff = @Backoff(delay = 50, multiplier = 1.5))
-    private void processEvidenceStatusChanged(BlockchainEventReceived event) {
-        String evidenceId = (String) event.getParameters().get("evidenceId");
-        String newStatus = (String) event.getParameters().get("newStatus");
-        String oldStatus = (String) event.getParameters().get("oldStatus");
-
-        EvidenceEntity evidence = evidenceRepository.findByEvidenceId(evidenceId).orElseThrow(
-                () -> new EvidenceNotFoundException("Evidence not found: " + evidenceId));
-
-        evidence.setStatus(newStatus);
-
-        if ("revoked".equals(newStatus)) {
-            evidence.setRevokedAt(LocalDateTime.now());
-            evidence.setRevokerAddress((String) event.getParameters().get("user"));
-        }
-
-        evidenceRepository.save(evidence);
-        log.info("Updated evidence status from {} to {} for evidenceId: {}", oldStatus, newStatus,
-                evidenceId);
-    }
-
-    private void processEvidenceVerified(BlockchainEventReceived event) {
-        String evidenceId = (String) event.getParameters().get("evidenceId");
-        Boolean isValid = (Boolean) event.getParameters().get("isValid");
-
-        log.info("Evidence verified for evidenceId: {}, isValid: {}", evidenceId,
-                isValid != null ? isValid : "unknown");
-        // No need to store verification status as it's just a verification operation
-    }
-
-    @Transactional(isolation = Isolation.READ_COMMITTED)
-    @Retryable(value = {org.springframework.dao.CannotAcquireLockException.class, 
-                      org.hibernate.exception.LockAcquisitionException.class,
-                      org.sqlite.SQLiteException.class},
-               maxAttempts = 3,
-               backoff = @Backoff(delay = 50, multiplier = 1.5))
-    private void processEvidenceRevoked(BlockchainEventReceived event) {
-        Object evidenceIdObj = event.getParameters().get("evidenceId");
-        Object revokerObj = event.getParameters().get("revoker");
-
-        String evidenceId = evidenceIdObj instanceof byte[] ? new String((byte[]) evidenceIdObj)
-                : (String) evidenceIdObj;
-        String userAddress = revokerObj instanceof byte[] ? new String((byte[]) revokerObj)
-                : (String) revokerObj;
-
-        EvidenceEntity evidence = evidenceRepository.findByEvidenceId(evidenceId).orElseThrow(
-                () -> new EvidenceNotFoundException("Evidence not found: " + evidenceId));
-
-        evidence.setStatus("revoked");
-        evidence.setRevokedAt(LocalDateTime.now());
-        evidence.setRevokerAddress(userAddress);
-
-        evidenceRepository.save(evidence);
-        log.info("Revoked evidence for evidenceId: {}", evidenceId);
-    }
-
-    @Transactional(isolation = Isolation.READ_COMMITTED)
-    @Retryable(value = {org.springframework.dao.CannotAcquireLockException.class, 
-                      org.hibernate.exception.LockAcquisitionException.class,
-                      org.sqlite.SQLiteException.class},
-               maxAttempts = 3,
-               backoff = @Backoff(delay = 50, multiplier = 1.5))
-    protected void markEventAsProcessed(String transactionHash, BigInteger logIndex) {
-        List<BlockchainEvent> events = blockchainEventRepository
-                .findByTransactionHash(transactionHash);
-
-        for (BlockchainEvent event : events) {
-            if (event.getLogIndex().equals(logIndex)) {
-                event.setIsProcessed(true);
-                event.setProcessedAt(LocalDateTime.now());
-                blockchainEventRepository.save(event);
-                break;
-            }
-        }
-    }
-
-    @Transactional(isolation = Isolation.READ_COMMITTED)
-    @Retryable(value = {org.springframework.dao.CannotAcquireLockException.class, 
-                      org.hibernate.exception.LockAcquisitionException.class,
-                      org.sqlite.SQLiteException.class},
-               maxAttempts = 3,
-               backoff = @Backoff(delay = 50, multiplier = 1.5))
-    protected void updateSyncStatus(BigInteger blockNumber) {
-        try {
-            String contractAddress = blockchainEventListener.getContractAddress();
-            SyncStatus syncStatus = syncStatusRepository.findById(contractAddress)
-                    .orElseGet(() -> new SyncStatus(contractAddress, BigInteger.ZERO));
-
-            if (blockNumber.compareTo(syncStatus.getLastBlockNumber()) > 0) {
-                syncStatus.setLastBlockNumber(blockNumber);
-                syncStatus.setLastSyncTimestamp(LocalDateTime.now());
-                syncStatus.setSyncStatus("SYNCED");
-                syncStatus.setErrorMessage(null);
-                syncStatus.setRetryCount(0);
-                syncStatusRepository.save(syncStatus);
-            }
-
-        } catch (Exception e) {
-            log.error("Failed to update sync status for block: {}", blockNumber, e);
-            throw new SyncException("Failed to update sync status", e);
-        }
-    }
-
+    /**
+     * 重新处理未处理的事件 - 用于手动触发重试
+     */
     public void reprocessUnprocessedEvents() {
         log.info("Reprocessing unprocessed blockchain events...");
 
@@ -310,10 +48,10 @@ public class EvidenceSyncService {
 
         for (BlockchainEvent event : unprocessedEvents) {
             try {
-                BlockchainEventReceived receivedEvent = parseEventData(event);
-                if (receivedEvent != null) {
-                    handleBlockchainEvent(receivedEvent);
-                }
+                log.info("Reprocessing event: {} for evidenceId: {}", event.getEventName(), 
+                        parseEvidenceIdFromRawData(event.getRawData()));
+                // 直接调用 EvidenceEventListener 的同步处理方法
+                blockchainEventListener.syncPastEvents(event.getBlockNumber(), event.getBlockNumber());
             } catch (Exception e) {
                 log.error("Failed to reprocess event with transaction hash: {}",
                         event.getTransactionHash(), e);
@@ -323,6 +61,9 @@ public class EvidenceSyncService {
         log.info("Completed reprocessing {} unprocessed events", unprocessedEvents.size());
     }
 
+    /**
+     * 清理旧的事件数据
+     */
     public void cleanupOldEvents() {
         try {
             BigInteger maxBlockNumber = evidenceRepository.findMaxBlockNumber();
@@ -338,102 +79,18 @@ public class EvidenceSyncService {
         }
     }
 
-    private BlockchainEventReceived parseEventData(BlockchainEvent event) {
+    /**
+     * 从原始数据中解析证据ID
+     */
+    private String parseEvidenceIdFromRawData(String rawData) {
         try {
-            Map<String, Object> parameters = parseEventParameters(event);
-
-            BlockchainEventReceived.Builder builder = BlockchainEventReceived.builder()
-                    .contractAddress(event.getContractAddress()).eventName(event.getEventName())
-                    .blockNumber(event.getBlockNumber()).transactionHash(event.getTransactionHash())
-                    .logIndex(event.getLogIndex()).blockTimestamp(event.getBlockTimestamp())
-                    .rawData(event.getRawData());
-
-            parameters.forEach(builder::parameter);
-
-            return builder.build();
-
+            JsonNode rootNode = objectMapper.readTree(rawData);
+            if (rootNode.has("evidenceId")) {
+                return rootNode.get("evidenceId").asText();
+            }
         } catch (Exception e) {
-            log.error("Failed to parse event data for transaction: {}", event.getTransactionHash(),
-                    e);
-            return null;
+            log.debug("Failed to parse evidenceId from raw data: {}", e.getMessage());
         }
-    }
-
-    private Map<String, Object> parseEventParameters(BlockchainEvent event) {
-        Map<String, Object> parameters = new HashMap<>();
-
-        if (event.getRawData() != null && !event.getRawData().isEmpty()) {
-            try {
-                JsonNode rootNode = objectMapper.readTree(event.getRawData());
-
-                switch (event.getEventName()) {
-                    case "EvidenceSubmitted":
-                        parseEvidenceSubmittedParameters(rootNode, parameters);
-                        break;
-                    case "EvidenceStatusChanged":
-                        parseEvidenceStatusChangedParameters(rootNode, parameters);
-                        break;
-                    case "EvidenceVerified":
-                        parseEvidenceVerifiedParameters(rootNode, parameters);
-                        break;
-                    case "EvidenceRevoked":
-                        parseEvidenceRevokedParameters(rootNode, parameters);
-                        break;
-                }
-            } catch (Exception e) {
-                log.error("Failed to parse event parameters for event: {}", event.getEventName(),
-                        e);
-            }
-        }
-
-        return parameters;
-    }
-
-    private void parseEvidenceSubmittedParameters(JsonNode rootNode,
-            Map<String, Object> parameters) {
-        extractParameter(rootNode, "evidenceId", parameters);
-        extractParameter(rootNode, "user", parameters);
-        extractParameter(rootNode, "hashValue", parameters);
-
-        if (rootNode.has("timestamp")) {
-            parameters.put("timestamp", new BigInteger(rootNode.get("timestamp").asText()));
-        }
-    }
-
-    private void parseEvidenceStatusChangedParameters(JsonNode rootNode,
-            Map<String, Object> parameters) {
-        extractParameter(rootNode, "evidenceId", parameters);
-        extractParameter(rootNode, "oldStatus", parameters);
-        extractParameter(rootNode, "newStatus", parameters);
-    }
-
-    private void parseEvidenceVerifiedParameters(JsonNode rootNode,
-            Map<String, Object> parameters) {
-        extractParameter(rootNode, "evidenceId", parameters);
-
-        if (rootNode.has("isValid")) {
-            parameters.put("isValid", rootNode.get("isValid").asBoolean());
-        }
-    }
-
-    private void parseEvidenceRevokedParameters(JsonNode rootNode, Map<String, Object> parameters) {
-        extractParameter(rootNode, "evidenceId", parameters);
-        extractParameter(rootNode, "revoker", parameters);
-    }
-
-    private void extractParameter(JsonNode rootNode, String paramName,
-            Map<String, Object> parameters) {
-        if (rootNode.has(paramName)) {
-            JsonNode paramNode = rootNode.get(paramName);
-            if (paramNode.isArray()) {
-                byte[] bytes = new byte[paramNode.size()];
-                for (int i = 0; i < paramNode.size(); i++) {
-                    bytes[i] = (byte) paramNode.get(i).asInt();
-                }
-                parameters.put(paramName, bytes);
-            } else {
-                parameters.put(paramName, paramNode.asText());
-            }
-        }
+        return "unknown";
     }
 }

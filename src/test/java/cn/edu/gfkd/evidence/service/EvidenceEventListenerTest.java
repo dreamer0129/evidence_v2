@@ -3,6 +3,7 @@ package cn.edu.gfkd.evidence.service;
 import cn.edu.gfkd.evidence.entity.SyncStatus;
 import cn.edu.gfkd.evidence.exception.BlockchainException;
 import cn.edu.gfkd.evidence.repository.BlockchainEventRepository;
+import cn.edu.gfkd.evidence.repository.EvidenceRepository;
 import cn.edu.gfkd.evidence.repository.SyncStatusRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 import org.web3j.protocol.Web3j;
 import cn.edu.gfkd.evidence.generated.EvidenceStorageContract;
 
@@ -33,13 +33,13 @@ class EvidenceEventListenerTest {
     private BlockchainEventRepository blockchainEventRepository;
 
     @Mock
+    private EvidenceRepository evidenceRepository;
+
+    @Mock
     private SyncStatusRepository syncStatusRepository;
 
     @Mock
     private ObjectMapper objectMapper;
-
-    @Mock
-    private ApplicationEventPublisher eventPublisher;
 
     @Mock
     private EvidenceStorageContract evidenceStorageContract;
@@ -54,7 +54,7 @@ class EvidenceEventListenerTest {
         lenient().when(evidenceStorageContract.getContractAddress()).thenReturn("0xContractAddress");
         
         evidenceEventListener = new EvidenceEventListener(
-                web3j, blockchainEventRepository, syncStatusRepository, eventPublisher, objectMapper, evidenceStorageContract);
+                web3j, blockchainEventRepository, evidenceRepository, syncStatusRepository, objectMapper, evidenceStorageContract);
 
         testSyncStatus = new SyncStatus("0xContractAddress", BigInteger.valueOf(50));
     }
@@ -124,7 +124,7 @@ class EvidenceEventListenerTest {
     void createEvidenceEventListener_WithValidParameters_ShouldSucceed() {
         // Act & Assert
         assertDoesNotThrow(() -> new EvidenceEventListener(
-                web3j, blockchainEventRepository, syncStatusRepository, eventPublisher, objectMapper, evidenceStorageContract));
+                web3j, blockchainEventRepository, evidenceRepository, syncStatusRepository, objectMapper, evidenceStorageContract));
     }
 
     @Test
@@ -132,7 +132,7 @@ class EvidenceEventListenerTest {
     void createEvidenceEventListener_WithNullWeb3j_ShouldSucceed() {
         // Act & Assert
         assertDoesNotThrow(() -> new EvidenceEventListener(
-                null, blockchainEventRepository, syncStatusRepository, eventPublisher, objectMapper, evidenceStorageContract));
+                null, blockchainEventRepository, evidenceRepository, syncStatusRepository, objectMapper, evidenceStorageContract));
     }
 
     @Test
@@ -140,7 +140,7 @@ class EvidenceEventListenerTest {
     void createEvidenceEventListener_WithNullRepositories_ShouldSucceed() {
         // Act & Assert
         assertDoesNotThrow(() -> new EvidenceEventListener(
-                web3j, null, null, eventPublisher, objectMapper, evidenceStorageContract));
+                web3j, null, null, null, objectMapper, evidenceStorageContract));
     }
 
     @Test
@@ -148,15 +148,7 @@ class EvidenceEventListenerTest {
     void createEvidenceEventListener_WithNullObjectMapper_ShouldSucceed() {
         // Act & Assert
         assertDoesNotThrow(() -> new EvidenceEventListener(
-                web3j, blockchainEventRepository, syncStatusRepository, eventPublisher, null, evidenceStorageContract));
-    }
-
-    @Test
-    @DisplayName("Should handle null eventPublisher gracefully")
-    void createEvidenceEventListener_WithNullEventPublisher_ShouldSucceed() {
-        // Act & Assert
-        assertDoesNotThrow(() -> new EvidenceEventListener(
-                web3j, blockchainEventRepository, syncStatusRepository, null, objectMapper, evidenceStorageContract));
+                web3j, blockchainEventRepository, evidenceRepository, syncStatusRepository, null, evidenceStorageContract));
     }
 
     @Test
@@ -164,7 +156,7 @@ class EvidenceEventListenerTest {
     void createEvidenceEventListener_WithNullContract_ShouldSucceed() {
         // Act & Assert
         assertDoesNotThrow(() -> new EvidenceEventListener(
-                web3j, blockchainEventRepository, syncStatusRepository, eventPublisher, objectMapper, null));
+                web3j, blockchainEventRepository, evidenceRepository, syncStatusRepository, objectMapper, null));
     }
 
     @Test
