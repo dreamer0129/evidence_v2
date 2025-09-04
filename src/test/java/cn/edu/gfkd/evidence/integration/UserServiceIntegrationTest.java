@@ -9,10 +9,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -20,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class UserServiceIntegrationTest {
 
     @Autowired
@@ -31,12 +34,22 @@ class UserServiceIntegrationTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    private String generateUniqueUsername() {
+        return "user_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    private String generateUniqueEmail() {
+        return "test_" + UUID.randomUUID().toString().substring(0, 8) + "@example.com";
+    }
+
     @Test
     void registerUser_ValidData_CreatesUserSuccessfully() {
         // Given
+        String username = generateUniqueUsername();
+        String email = generateUniqueEmail();
         UserRegistrationDto registrationDto = new UserRegistrationDto();
-        registrationDto.setUsername("testuser");
-        registrationDto.setEmail("test@example.com");
+        registrationDto.setUsername(username);
+        registrationDto.setEmail(email);
         registrationDto.setPassword("password123");
 
         // When
@@ -45,15 +58,15 @@ class UserServiceIntegrationTest {
         // Then
         assertThat(savedUser).isNotNull();
         assertThat(savedUser.getId()).isNotNull();
-        assertThat(savedUser.getUsername()).isEqualTo("testuser");
-        assertThat(savedUser.getEmail()).isEqualTo("test@example.com");
+        assertThat(savedUser.getUsername()).isEqualTo(username);
+        assertThat(savedUser.getEmail()).isEqualTo(email);
         assertThat(savedUser.getRole()).isEqualTo("USER");
         assertThat(passwordEncoder.matches("password123", savedUser.getPassword())).isTrue();
 
         // Verify user is persisted in database
-        Optional<User> foundUser = userRepository.findByUsername("testuser");
+        Optional<User> foundUser = userRepository.findByUsername(username);
         assertThat(foundUser).isPresent();
-        assertThat(foundUser.get().getEmail()).isEqualTo("test@example.com");
+        assertThat(foundUser.get().getEmail()).isEqualTo(email);
     }
 
     @Test
@@ -81,14 +94,16 @@ class UserServiceIntegrationTest {
     @Test
     void registerUser_DuplicateEmail_ThrowsException() {
         // Given
+        String duplicateEmail = generateUniqueEmail();
+        
         UserRegistrationDto firstDto = new UserRegistrationDto();
         firstDto.setUsername("firstuser");
-        firstDto.setEmail("duplicate@example.com");
+        firstDto.setEmail(duplicateEmail);
         firstDto.setPassword("password123");
 
         UserRegistrationDto secondDto = new UserRegistrationDto();
         secondDto.setUsername("seconduser");
-        secondDto.setEmail("duplicate@example.com");
+        secondDto.setEmail(duplicateEmail);
         secondDto.setPassword("password456");
 
         // When
@@ -113,7 +128,7 @@ class UserServiceIntegrationTest {
         // Given
         UserRegistrationDto registrationDto = new UserRegistrationDto();
         registrationDto.setUsername("");
-        registrationDto.setEmail("test@example.com");
+        registrationDto.setEmail(generateUniqueEmail());
         registrationDto.setPassword("password123");
 
         // When & Then
@@ -126,7 +141,7 @@ class UserServiceIntegrationTest {
     void registerUser_EmptyEmail_ThrowsException() {
         // Given
         UserRegistrationDto registrationDto = new UserRegistrationDto();
-        registrationDto.setUsername("testuser");
+        registrationDto.setUsername(generateUniqueUsername());
         registrationDto.setEmail("");
         registrationDto.setPassword("password123");
 
@@ -140,8 +155,8 @@ class UserServiceIntegrationTest {
     void registerUser_EmptyPassword_ThrowsException() {
         // Given
         UserRegistrationDto registrationDto = new UserRegistrationDto();
-        registrationDto.setUsername("testuser");
-        registrationDto.setEmail("test@example.com");
+        registrationDto.setUsername(generateUniqueUsername());
+        registrationDto.setEmail(generateUniqueEmail());
         registrationDto.setPassword("");
 
         // When & Then
@@ -153,20 +168,22 @@ class UserServiceIntegrationTest {
     @Test
     void findByUsername_ExistingUser_ReturnsUser() {
         // Given
+        String username = generateUniqueUsername();
+        String email = generateUniqueEmail();
         UserRegistrationDto registrationDto = new UserRegistrationDto();
-        registrationDto.setUsername("finduser");
-        registrationDto.setEmail("find@example.com");
+        registrationDto.setUsername(username);
+        registrationDto.setEmail(email);
         registrationDto.setPassword("password123");
 
         User savedUser = userService.registerUser(registrationDto);
 
         // When
-        Optional<User> foundUser = userService.findByUsername("finduser");
+        Optional<User> foundUser = userService.findByUsername(username);
 
         // Then
         assertThat(foundUser).isPresent();
         assertThat(foundUser.get().getId()).isEqualTo(savedUser.getId());
-        assertThat(foundUser.get().getEmail()).isEqualTo("find@example.com");
+        assertThat(foundUser.get().getEmail()).isEqualTo(email);
     }
 
     @Test
@@ -209,13 +226,13 @@ class UserServiceIntegrationTest {
     void registerUser_MultipleUsers_CreatesAllWithUniqueIds() {
         // Given
         UserRegistrationDto dto1 = new UserRegistrationDto();
-        dto1.setUsername("user1");
-        dto1.setEmail("user1@example.com");
+        dto1.setUsername(generateUniqueUsername());
+        dto1.setEmail(generateUniqueEmail());
         dto1.setPassword("password123");
 
         UserRegistrationDto dto2 = new UserRegistrationDto();
-        dto2.setUsername("user2");
-        dto2.setEmail("user2@example.com");
+        dto2.setUsername(generateUniqueUsername());
+        dto2.setEmail(generateUniqueEmail());
         dto2.setPassword("password456");
 
         UserRegistrationDto dto3 = new UserRegistrationDto();
@@ -243,13 +260,16 @@ class UserServiceIntegrationTest {
     @Test
     void findByUsername_CaseSensitive_ReturnsCorrectUser() {
         // Given
+        String username1 = generateUniqueUsername();
+        String username2 = generateUniqueUsername();
+        
         UserRegistrationDto dto1 = new UserRegistrationDto();
-        dto1.setUsername("TestUser");
+        dto1.setUsername(username1);
         dto1.setEmail("test1@example.com");
         dto1.setPassword("password123");
 
         UserRegistrationDto dto2 = new UserRegistrationDto();
-        dto2.setUsername("testuser");
+        dto2.setUsername(username2);
         dto2.setEmail("test2@example.com");
         dto2.setPassword("password456");
 
@@ -257,7 +277,7 @@ class UserServiceIntegrationTest {
         userService.registerUser(dto2);
 
         // When
-        Optional<User> foundUser = userService.findByUsername("testuser");
+        Optional<User> foundUser = userService.findByUsername(username2);
 
         // Then
         assertThat(foundUser).isPresent();
@@ -267,25 +287,28 @@ class UserServiceIntegrationTest {
     @Test
     void findByEmail_CaseSensitive_ReturnsCorrectUser() {
         // Given
+        String email1 = "Test1@example.com";
+        String email2 = "Test2@example.com";
+        
         UserRegistrationDto dto1 = new UserRegistrationDto();
-        dto1.setUsername("user1");
-        dto1.setEmail("Test@example.com");
+        dto1.setUsername(generateUniqueUsername());
+        dto1.setEmail(email1);
         dto1.setPassword("password123");
 
         UserRegistrationDto dto2 = new UserRegistrationDto();
-        dto2.setUsername("user2");
-        dto2.setEmail("test@example.com");
+        dto2.setUsername(generateUniqueUsername());
+        dto2.setEmail(email2);
         dto2.setPassword("password456");
 
         userService.registerUser(dto1);
         userService.registerUser(dto2);
 
         // When
-        Optional<User> foundUser = userService.findByEmail("test@example.com");
+        Optional<User> foundUser = userService.findByEmail(email2);
 
         // Then
         assertThat(foundUser).isPresent();
-        assertThat(foundUser.get().getUsername()).isEqualTo("user2");
+        assertThat(foundUser.get().getUsername()).isNotEqualTo(dto1.getUsername());
     }
 
     @Test

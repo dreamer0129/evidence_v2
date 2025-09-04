@@ -10,11 +10,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigInteger;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -22,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class EvidenceServiceIntegrationTest {
 
     @Autowired
@@ -30,11 +33,17 @@ class EvidenceServiceIntegrationTest {
     @Autowired
     private EvidenceRepository evidenceRepository;
 
-    @Test
-    void createEvidence_ValidEvidence_CreatesEvidenceSuccessfully() {
-        // Given
-        EvidenceEntity evidence = new EvidenceEntity(
-                "EVID:1234567890:CN-001",
+    private String generateUniqueTransactionHash() {
+        return "0x" + UUID.randomUUID().toString().replace("-", "") + "abcdef1234567890";
+    }
+
+    private String generateUniqueEvidenceId() {
+        return "EVID:" + System.currentTimeMillis() + ":CN-" + UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    private EvidenceEntity createTestEvidence() {
+        return new EvidenceEntity(
+                generateUniqueEvidenceId(),
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
                 "application/pdf",
@@ -43,7 +52,27 @@ class EvidenceServiceIntegrationTest {
                 "SHA256",
                 "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
                 BigInteger.valueOf(100),
-                "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+                generateUniqueTransactionHash(),
+                BigInteger.valueOf(1234567890),
+                "Test evidence memo");
+    }
+
+    @Test
+    void createEvidence_ValidEvidence_CreatesEvidenceSuccessfully() {
+        // Given
+        String evidenceId = generateUniqueEvidenceId();
+        String transactionHash = generateUniqueTransactionHash();
+        EvidenceEntity evidence = new EvidenceEntity(
+                evidenceId,
+                "0x1234567890123456789012345678901234567890",
+                "test_file.pdf",
+                "application/pdf",
+                1024L,
+                BigInteger.valueOf(1234567890),
+                "SHA256",
+                "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                BigInteger.valueOf(100),
+                transactionHash,
                 BigInteger.valueOf(1234567890),
                 "Test evidence memo");
 
@@ -53,7 +82,7 @@ class EvidenceServiceIntegrationTest {
         // Then
         assertThat(savedEvidence).isNotNull();
         assertThat(savedEvidence.getId()).isNotNull();
-        assertThat(savedEvidence.getEvidenceId()).isEqualTo("EVID:1234567890:CN-001");
+        assertThat(savedEvidence.getEvidenceId()).isEqualTo(evidenceId);
         assertThat(savedEvidence.getUserAddress()).isEqualTo("0x1234567890123456789012345678901234567890");
         assertThat(savedEvidence.getHashValue())
                 .isEqualTo("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
@@ -61,7 +90,7 @@ class EvidenceServiceIntegrationTest {
         // Verify evidence is persisted in database
         EvidenceEntity foundEvidence = evidenceRepository.findById(savedEvidence.getId()).orElse(null);
         assertThat(foundEvidence).isNotNull();
-        assertThat(foundEvidence.getEvidenceId()).isEqualTo("EVID:1234567890:CN-001");
+        assertThat(foundEvidence.getEvidenceId()).isEqualTo(evidenceId);
     }
 
     @Test
@@ -85,7 +114,7 @@ class EvidenceServiceIntegrationTest {
                 "SHA256",
                 "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
                 BigInteger.valueOf(100),
-                "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+                generateUniqueTransactionHash(),
                 BigInteger.valueOf(1234567890),
                 "Test evidence memo");
 
@@ -99,7 +128,7 @@ class EvidenceServiceIntegrationTest {
     void createEvidence_EmptyUserAddress_ThrowsException() {
         // Given
         EvidenceEntity evidence = new EvidenceEntity(
-                "EVID:1234567890:CN-001",
+                generateUniqueEvidenceId(),
                 "",
                 "test_file.pdf",
                 "application/pdf",
@@ -108,7 +137,7 @@ class EvidenceServiceIntegrationTest {
                 "SHA256",
                 "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
                 BigInteger.valueOf(100),
-                "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+                generateUniqueTransactionHash(),
                 BigInteger.valueOf(1234567890),
                 "Test evidence memo");
 
@@ -122,7 +151,7 @@ class EvidenceServiceIntegrationTest {
     void createEvidence_EmptyHashValue_ThrowsException() {
         // Given
         EvidenceEntity evidence = new EvidenceEntity(
-                "EVID:1234567890:CN-001",
+                generateUniqueEvidenceId(),
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
                 "application/pdf",
@@ -131,7 +160,7 @@ class EvidenceServiceIntegrationTest {
                 "SHA256",
                 "",
                 BigInteger.valueOf(100),
-                "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+                generateUniqueTransactionHash(),
                 BigInteger.valueOf(1234567890),
                 "Test evidence memo");
 
@@ -144,8 +173,10 @@ class EvidenceServiceIntegrationTest {
     @Test
     void getEvidenceById_ExistingEvidence_ReturnsEvidence() {
         // Given
+        String evidenceId = generateUniqueEvidenceId();
+        String transactionHash = generateUniqueTransactionHash();
         EvidenceEntity evidence = new EvidenceEntity(
-                "EVID:1234567890:CN-001",
+                evidenceId,
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
                 "application/pdf",
@@ -154,7 +185,7 @@ class EvidenceServiceIntegrationTest {
                 "SHA256",
                 "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
                 BigInteger.valueOf(100),
-                "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+                transactionHash,
                 BigInteger.valueOf(1234567890),
                 "Test evidence memo");
         EvidenceEntity savedEvidence = evidenceRepository.save(evidence);
@@ -164,7 +195,7 @@ class EvidenceServiceIntegrationTest {
 
         // Then
         assertThat(foundEvidence).isPresent();
-        assertThat(foundEvidence.get().getEvidenceId()).isEqualTo("EVID:1234567890:CN-001");
+        assertThat(foundEvidence.get().getEvidenceId()).isEqualTo(evidenceId);
     }
 
     @Test
@@ -179,8 +210,9 @@ class EvidenceServiceIntegrationTest {
     @Test
     void getEvidenceByEvidenceId_ExistingEvidence_ReturnsEvidence() {
         // Given
+        String evidenceId = generateUniqueEvidenceId();
         EvidenceEntity evidence = new EvidenceEntity(
-                "EVID:1234567890:CN-001",
+                evidenceId,
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
                 "application/pdf",
@@ -189,13 +221,13 @@ class EvidenceServiceIntegrationTest {
                 "SHA256",
                 "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
                 BigInteger.valueOf(100),
-                "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+                generateUniqueTransactionHash(),
                 BigInteger.valueOf(1234567890),
                 "Test evidence memo");
         evidenceRepository.save(evidence);
 
         // When
-        var foundEvidence = evidenceService.getEvidenceByEvidenceId("EVID:1234567890:CN-001");
+        var foundEvidence = evidenceService.getEvidenceByEvidenceId(evidenceId);
 
         // Then
         assertThat(foundEvidence).isPresent();
@@ -217,7 +249,7 @@ class EvidenceServiceIntegrationTest {
         String userAddress = "0x1234567890123456789012345678901234567890";
 
         EvidenceEntity evidence1 = new EvidenceEntity(
-                "EVID:1234567890:CN-001",
+                generateUniqueEvidenceId(),
                 userAddress,
                 "test_file.pdf",
                 "application/pdf",
@@ -226,21 +258,21 @@ class EvidenceServiceIntegrationTest {
                 "SHA256",
                 "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
                 BigInteger.valueOf(100),
-                "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+                generateUniqueTransactionHash(),
                 BigInteger.valueOf(1234567890),
                 "Test evidence memo");
 
         EvidenceEntity evidence2 = new EvidenceEntity(
-                "EVID:1234567891:CN-002",
+                generateUniqueEvidenceId(),
                 userAddress,
                 "test_image.jpg",
                 "image/jpeg",
                 2048L,
                 BigInteger.valueOf(1234567891),
                 "SHA256",
-                "0x0987654321fedcba0987654321fedcba0987654321fedcba0987654321fedcba",
+                generateUniqueTransactionHash(),
                 BigInteger.valueOf(101),
-                "0x0987654321fedcba0987654321fedcba0987654321fedcba0987654321fedcba",
+                generateUniqueTransactionHash(),
                 BigInteger.valueOf(1234567891),
                 "Test image evidence");
 
@@ -271,7 +303,7 @@ class EvidenceServiceIntegrationTest {
         Pageable pageable = PageRequest.of(0, 10);
 
         EvidenceEntity evidence1 = new EvidenceEntity(
-                "EVID:1234567890:CN-001",
+                generateUniqueEvidenceId(),
                 userAddress,
                 "test_file.pdf",
                 "application/pdf",
@@ -280,7 +312,7 @@ class EvidenceServiceIntegrationTest {
                 "SHA256",
                 "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
                 BigInteger.valueOf(100),
-                "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+                generateUniqueTransactionHash(),
                 BigInteger.valueOf(1234567890),
                 "Test evidence memo");
 
@@ -298,8 +330,9 @@ class EvidenceServiceIntegrationTest {
     @Test
     void existsByEvidenceId_ExistingEvidence_ReturnsTrue() {
         // Given
+        String evidenceId = generateUniqueEvidenceId();
         EvidenceEntity evidence = new EvidenceEntity(
-                "EVID:1234567890:CN-001",
+                evidenceId,
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
                 "application/pdf",
@@ -308,13 +341,13 @@ class EvidenceServiceIntegrationTest {
                 "SHA256",
                 "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
                 BigInteger.valueOf(100),
-                "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+                generateUniqueTransactionHash(),
                 BigInteger.valueOf(1234567890),
                 "Test evidence memo");
         evidenceRepository.save(evidence);
 
         // When
-        boolean exists = evidenceService.existsByEvidenceId("EVID:1234567890:CN-001");
+        boolean exists = evidenceService.existsByEvidenceId(evidenceId);
 
         // Then
         assertThat(exists).isTrue();
@@ -335,7 +368,7 @@ class EvidenceServiceIntegrationTest {
         String userAddress = "0x1234567890123456789012345678901234567890";
 
         EvidenceEntity evidence1 = new EvidenceEntity(
-                "EVID:1234567890:CN-001",
+                generateUniqueEvidenceId(),
                 userAddress,
                 "test_file.pdf",
                 "application/pdf",
@@ -344,21 +377,21 @@ class EvidenceServiceIntegrationTest {
                 "SHA256",
                 "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
                 BigInteger.valueOf(100),
-                "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+                generateUniqueTransactionHash(),
                 BigInteger.valueOf(1234567890),
                 "Test evidence memo");
 
         EvidenceEntity evidence2 = new EvidenceEntity(
-                "EVID:1234567891:CN-002",
+                generateUniqueEvidenceId(),
                 userAddress,
                 "test_image.jpg",
                 "image/jpeg",
                 2048L,
                 BigInteger.valueOf(1234567891),
                 "SHA256",
-                "0x0987654321fedcba0987654321fedcba0987654321fedcba0987654321fedcba",
+                generateUniqueTransactionHash(),
                 BigInteger.valueOf(101),
-                "0x0987654321fedcba0987654321fedcba0987654321fedcba0987654321fedcba",
+                generateUniqueTransactionHash(),
                 BigInteger.valueOf(1234567891),
                 "Test image evidence");
 
@@ -385,7 +418,7 @@ class EvidenceServiceIntegrationTest {
     void updateEvidence_ValidEvidence_UpdatesEvidence() {
         // Given
         EvidenceEntity evidence = new EvidenceEntity(
-                "EVID:1234567890:CN-001",
+                generateUniqueEvidenceId(),
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
                 "application/pdf",
@@ -394,7 +427,7 @@ class EvidenceServiceIntegrationTest {
                 "SHA256",
                 "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
                 BigInteger.valueOf(100),
-                "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+                generateUniqueTransactionHash(),
                 BigInteger.valueOf(1234567890),
                 "Test evidence memo");
         EvidenceEntity savedEvidence = evidenceRepository.save(evidence);
@@ -416,7 +449,7 @@ class EvidenceServiceIntegrationTest {
     void deleteEvidence_ExistingEvidence_DeletesEvidence() {
         // Given
         EvidenceEntity evidence = new EvidenceEntity(
-                "EVID:1234567890:CN-001",
+                generateUniqueEvidenceId(),
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
                 "application/pdf",
@@ -425,7 +458,7 @@ class EvidenceServiceIntegrationTest {
                 "SHA256",
                 "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
                 BigInteger.valueOf(100),
-                "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+                generateUniqueTransactionHash(),
                 BigInteger.valueOf(1234567890),
                 "Test evidence memo");
         EvidenceEntity savedEvidence = evidenceRepository.save(evidence);
@@ -448,8 +481,9 @@ class EvidenceServiceIntegrationTest {
     @Test
     void deleteEvidenceByEvidenceId_ExistingEvidence_DeletesEvidence() {
         // Given
+        String evidenceId = generateUniqueEvidenceId();
         EvidenceEntity evidence = new EvidenceEntity(
-                "EVID:1234567890:CN-001",
+                evidenceId,
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
                 "application/pdf",
@@ -458,16 +492,16 @@ class EvidenceServiceIntegrationTest {
                 "SHA256",
                 "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
                 BigInteger.valueOf(100),
-                "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+                generateUniqueTransactionHash(),
                 BigInteger.valueOf(1234567890),
                 "Test evidence memo");
         evidenceRepository.save(evidence);
 
         // When
-        evidenceService.deleteEvidenceByEvidenceId("EVID:1234567890:CN-001");
+        evidenceService.deleteEvidenceByEvidenceId(evidenceId);
 
         // Then
-        assertThat(evidenceRepository.findByEvidenceId("EVID:1234567890:CN-001")).isEmpty();
+        assertThat(evidenceRepository.findByEvidenceId(generateUniqueEvidenceId())).isEmpty();
     }
 
     @Test
@@ -482,7 +516,7 @@ class EvidenceServiceIntegrationTest {
     void count_ReturnsTotalCount() {
         // Given
         EvidenceEntity evidence1 = new EvidenceEntity(
-                "EVID:1234567890:CN-001",
+                generateUniqueEvidenceId(),
                 "0x1234567890123456789012345678901234567890",
                 "test_file.pdf",
                 "application/pdf",
@@ -491,21 +525,21 @@ class EvidenceServiceIntegrationTest {
                 "SHA256",
                 "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
                 BigInteger.valueOf(100),
-                "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+                generateUniqueTransactionHash(),
                 BigInteger.valueOf(1234567890),
                 "Test evidence memo");
 
         EvidenceEntity evidence2 = new EvidenceEntity(
-                "EVID:1234567891:CN-002",
+                generateUniqueEvidenceId(),
                 "0x0987654321098765432109876543210987654321",
                 "test_image.jpg",
                 "image/jpeg",
                 2048L,
                 BigInteger.valueOf(1234567891),
                 "SHA256",
-                "0x0987654321fedcba0987654321fedcba0987654321fedcba0987654321fedcba",
+                generateUniqueTransactionHash(),
                 BigInteger.valueOf(101),
-                "0x0987654321fedcba0987654321fedcba0987654321fedcba0987654321fedcba",
+                generateUniqueTransactionHash(),
                 BigInteger.valueOf(1234567891),
                 "Test image evidence");
 

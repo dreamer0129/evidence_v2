@@ -14,12 +14,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigInteger;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -27,6 +29,7 @@ import static org.mockito.Mockito.when;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class EvidenceSyncServiceIntegrationTest {
 
         @Autowired
@@ -44,25 +47,43 @@ class EvidenceSyncServiceIntegrationTest {
         @MockBean
         private EvidenceEventListener evidenceEventListener;
 
+        private String generateUniqueTransactionHash() {
+            return "0x" + UUID.randomUUID().toString().replace("-", "") + "1234567890";
+        }
+
+        private String generateUniqueEvidenceId() {
+            return "EVID:" + System.currentTimeMillis() + ":CN-" + UUID.randomUUID().toString().substring(0, 8);
+        }
+
+        private String generateUniqueContractAddress() {
+            return "0x" + String.format("%040d", Math.abs(UUID.randomUUID().hashCode()));
+        }
+
         @Test
         void reprocessUnprocessedEvents_ProcessesEvidenceSubmittedEvent() throws Exception {
                 // Given
-                when(evidenceEventListener.getContractAddress()).thenReturn("0xContractAddress");
+                String contractAddress = generateUniqueContractAddress();
+                String transactionHash = generateUniqueTransactionHash();
+                String evidenceId = generateUniqueEvidenceId();
+                String userAddress = "0x1234567890123456789012345678901234567890";
+                String hashValue = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+                
+                when(evidenceEventListener.getContractAddress()).thenReturn(contractAddress);
 
                 // Create blockchain event record with raw data that can be parsed
                 BlockchainEvent blockchainEvent = new BlockchainEvent(
-                                "0xContractAddress",
+                                contractAddress,
                                 "EvidenceSubmitted",
                                 BigInteger.valueOf(100),
-                                "0xTransactionHash",
+                                transactionHash,
                                 BigInteger.valueOf(0),
                                 BigInteger.valueOf(1234567890),
-                                "{\"evidenceId\":\"EVID:1234567890:CN-001\",\"user\":\"0x1234567890123456789012345678901234567890\",\"hashValue\":\"0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\",\"timestamp\":\"1234567890\"}");
+                                "{\"evidenceId\":\"" + evidenceId + "\",\"user\":\"" + userAddress + "\",\"hashValue\":\"" + hashValue + "\",\"timestamp\":\"1234567890\"}");
                 blockchainEvent.setIsProcessed(false);
                 blockchainEventRepository.save(blockchainEvent);
 
                 // Create sync status
-                SyncStatus syncStatus = new SyncStatus("0xContractAddress", BigInteger.valueOf(50));
+                SyncStatus syncStatus = new SyncStatus(contractAddress, BigInteger.valueOf(50));
                 syncStatusRepository.save(syncStatus);
 
                 // When
@@ -72,15 +93,14 @@ class EvidenceSyncServiceIntegrationTest {
                 List<EvidenceEntity> evidenceList = evidenceRepository.findAll();
                 assertThat(evidenceList).hasSize(1);
                 EvidenceEntity savedEvidence = evidenceList.get(0);
-                assertThat(savedEvidence.getEvidenceId()).isEqualTo("EVID:1234567890:CN-001");
-                assertThat(savedEvidence.getUserAddress()).isEqualTo("0x1234567890123456789012345678901234567890");
-                assertThat(savedEvidence.getHashValue())
-                                .isEqualTo("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
+                assertThat(savedEvidence.getEvidenceId()).isEqualTo(evidenceId);
+                assertThat(savedEvidence.getUserAddress()).isEqualTo(userAddress);
+                assertThat(savedEvidence.getHashValue()).isEqualTo(hashValue);
                 assertThat(savedEvidence.getStatus()).isEqualTo("effective");
 
                 // Verify blockchain event is marked as processed
                 List<BlockchainEvent> blockchainEvents = blockchainEventRepository
-                                .findByTransactionHash("0xTransactionHash");
+                                .findByTransactionHash(transactionHash);
                 assertThat(blockchainEvents).hasSize(1);
                 assertThat(blockchainEvents.get(0).getIsProcessed()).isTrue();
         }
@@ -88,15 +108,21 @@ class EvidenceSyncServiceIntegrationTest {
         @Test
         void handleBlockchainEvent_EvidenceAlreadyExists_DoesNotCreateDuplicate() {
                 // Given
+                String evidenceId = generateUniqueEvidenceId();
+                String userAddress = "0x1234567890123456789012345678901234567890";
+                String hashValue = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+                String contractAddress = generateUniqueContractAddress();
+                String transactionHash = generateUniqueTransactionHash();
+                
                 EvidenceEntity existingEvidence = new EvidenceEntity(
-                                "EVID:1234567890:CN-001",
-                                "0x1234567890123456789012345678901234567890",
+                                evidenceId,
+                                userAddress,
                                 "test_file.pdf",
                                 "application/pdf",
                                 1024L,
                                 BigInteger.valueOf(1234567890),
                                 "SHA256",
-                                "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                                hashValue,
                                 BigInteger.valueOf(90),
                                 "0xOldTransactionHash",
                                 BigInteger.valueOf(1234567890),
@@ -104,22 +130,21 @@ class EvidenceSyncServiceIntegrationTest {
                 evidenceRepository.save(existingEvidence);
 
                 BlockchainEventReceived event = BlockchainEventReceived.builder()
-                                .contractAddress("0xContractAddress")
+                                .contractAddress(contractAddress)
                                 .eventName("EvidenceSubmitted")
                                 .blockNumber(BigInteger.valueOf(100))
-                                .transactionHash("0xTransactionHash")
+                                .transactionHash(transactionHash)
                                 .logIndex(BigInteger.valueOf(0))
                                 .blockTimestamp(BigInteger.valueOf(1234567890))
                                 .rawData("{\"test\":\"data\"}")
-                                .parameter("evidenceId", "EVID:1234567890:CN-001")
-                                .parameter("user", "0x1234567890123456789012345678901234567890")
-                                .parameter("hashValue",
-                                                "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+                                .parameter("evidenceId", evidenceId)
+                                .parameter("user", userAddress)
+                                .parameter("hashValue", hashValue)
                                 .parameter("timestamp", BigInteger.valueOf(1234567890))
                                 .build();
 
                 // Create sync status
-                SyncStatus syncStatus = new SyncStatus("0xContractAddress", BigInteger.valueOf(50));
+                SyncStatus syncStatus = new SyncStatus(contractAddress, BigInteger.valueOf(50));
                 syncStatusRepository.save(syncStatus);
 
                 // When
@@ -128,23 +153,29 @@ class EvidenceSyncServiceIntegrationTest {
                 // Then
                 List<EvidenceEntity> evidenceList = evidenceRepository.findAll();
                 assertThat(evidenceList).hasSize(1);
-                assertThat(evidenceList.get(0).getEvidenceId()).isEqualTo("EVID:1234567890:CN-001");
+                assertThat(evidenceList.get(0).getEvidenceId()).isEqualTo(evidenceId);
         }
 
         @Test
         void reprocessUnprocessedEvents_ProcessesEvidenceStatusChangedEvent() throws Exception {
                 // Given
-                when(evidenceEventListener.getContractAddress()).thenReturn("0xContractAddress");
+                String contractAddress = generateUniqueContractAddress();
+                String transactionHash = generateUniqueTransactionHash();
+                String evidenceId = generateUniqueEvidenceId();
+                String userAddress = "0x1234567890123456789012345678901234567890";
+                String hashValue = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+                
+                when(evidenceEventListener.getContractAddress()).thenReturn(contractAddress);
 
                 EvidenceEntity existingEvidence = new EvidenceEntity(
-                                "EVID:1234567890:CN-001",
-                                "0x1234567890123456789012345678901234567890",
+                                evidenceId,
+                                userAddress,
                                 "test_file.pdf",
                                 "application/pdf",
                                 1024L,
                                 BigInteger.valueOf(1234567890),
                                 "SHA256",
-                                "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                                hashValue,
                                 BigInteger.valueOf(90),
                                 "0xOldTransactionHash",
                                 BigInteger.valueOf(1234567890),
@@ -154,32 +185,32 @@ class EvidenceSyncServiceIntegrationTest {
 
                 // Create blockchain event record with raw data that can be parsed
                 BlockchainEvent blockchainEvent = new BlockchainEvent(
-                                "0xContractAddress",
+                                contractAddress,
                                 "EvidenceStatusChanged",
                                 BigInteger.valueOf(100),
-                                "0xTransactionHash",
+                                transactionHash,
                                 BigInteger.valueOf(0),
                                 BigInteger.valueOf(1234567890),
-                                "{\"evidenceId\":\"EVID:1234567890:CN-001\",\"oldStatus\":\"pending\",\"newStatus\":\"verified\"}");
+                                "{\"evidenceId\":\"" + evidenceId + "\",\"oldStatus\":\"pending\",\"newStatus\":\"verified\"}");
                 blockchainEvent.setIsProcessed(false);
                 blockchainEventRepository.save(blockchainEvent);
 
                 // Create sync status
-                SyncStatus syncStatus = new SyncStatus("0xContractAddress", BigInteger.valueOf(50));
+                SyncStatus syncStatus = new SyncStatus(contractAddress, BigInteger.valueOf(50));
                 syncStatusRepository.save(syncStatus);
 
                 // When
                 evidenceSyncService.reprocessUnprocessedEvents();
 
                 // Then
-                EvidenceEntity updatedEvidence = evidenceRepository.findByEvidenceId("EVID:1234567890:CN-001")
+                EvidenceEntity updatedEvidence = evidenceRepository.findByEvidenceId(evidenceId)
                                 .orElse(null);
                 assertThat(updatedEvidence).isNotNull();
                 assertThat(updatedEvidence.getStatus()).isEqualTo("verified");
 
                 // Verify blockchain event is marked as processed
                 List<BlockchainEvent> blockchainEvents = blockchainEventRepository
-                                .findByTransactionHash("0xTransactionHash");
+                                .findByTransactionHash(transactionHash);
                 assertThat(blockchainEvents).hasSize(1);
                 assertThat(blockchainEvents.get(0).getIsProcessed()).isTrue();
         }
@@ -187,17 +218,23 @@ class EvidenceSyncServiceIntegrationTest {
         @Test
         void reprocessUnprocessedEvents_ProcessesEvidenceRevokedEvent() throws Exception {
                 // Given
-                when(evidenceEventListener.getContractAddress()).thenReturn("0xContractAddress");
+                String contractAddress = generateUniqueContractAddress();
+                String transactionHash = generateUniqueTransactionHash();
+                String evidenceId = generateUniqueEvidenceId();
+                String userAddress = "0x1234567890123456789012345678901234567890";
+                String hashValue = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+                
+                when(evidenceEventListener.getContractAddress()).thenReturn(contractAddress);
 
                 EvidenceEntity existingEvidence = new EvidenceEntity(
-                                "EVID:1234567890:CN-001",
-                                "0x1234567890123456789012345678901234567890",
+                                evidenceId,
+                                userAddress,
                                 "test_file.pdf",
                                 "application/pdf",
                                 1024L,
                                 BigInteger.valueOf(1234567890),
                                 "SHA256",
-                                "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                                hashValue,
                                 BigInteger.valueOf(90),
                                 "0xOldTransactionHash",
                                 BigInteger.valueOf(1234567890),
@@ -207,25 +244,25 @@ class EvidenceSyncServiceIntegrationTest {
 
                 // Create blockchain event record with raw data that can be parsed
                 BlockchainEvent blockchainEvent = new BlockchainEvent(
-                                "0xContractAddress",
+                                contractAddress,
                                 "EvidenceRevoked",
                                 BigInteger.valueOf(100),
-                                "0xTransactionHash",
+                                transactionHash,
                                 BigInteger.valueOf(0),
                                 BigInteger.valueOf(1234567890),
-                                "{\"evidenceId\":[69,86,73,68,58,49,50,51,52,53,54,55,56,57,48,58,67,78,45,48,48,49],\"revoker\":[48,120,49,50,51,52,53,54,55,56,57,48,49,50,51,52,53,54,55,56,57,48,49,50,51,52,53,54,55,56,57,48,49,50,51,52,53,54,55,56,57,48]}");
+                                "{\"evidenceId\":\"" + evidenceId + "\",\"revoker\":\"0x1234567890123456789012345678901234567890\"}");
                 blockchainEvent.setIsProcessed(false);
                 blockchainEventRepository.save(blockchainEvent);
 
                 // Create sync status
-                SyncStatus syncStatus = new SyncStatus("0xContractAddress", BigInteger.valueOf(50));
+                SyncStatus syncStatus = new SyncStatus(contractAddress, BigInteger.valueOf(50));
                 syncStatusRepository.save(syncStatus);
 
                 // When
                 evidenceSyncService.reprocessUnprocessedEvents();
 
                 // Then
-                EvidenceEntity updatedEvidence = evidenceRepository.findByEvidenceId("EVID:1234567890:CN-001")
+                EvidenceEntity updatedEvidence = evidenceRepository.findByEvidenceId(evidenceId)
                                 .orElse(null);
                 assertThat(updatedEvidence).isNotNull();
                 assertThat(updatedEvidence.getStatus()).isEqualTo("revoked");
@@ -234,7 +271,7 @@ class EvidenceSyncServiceIntegrationTest {
 
                 // Verify blockchain event is marked as processed
                 List<BlockchainEvent> blockchainEvents = blockchainEventRepository
-                                .findByTransactionHash("0xTransactionHash");
+                                .findByTransactionHash(transactionHash);
                 assertThat(blockchainEvents).hasSize(1);
                 assertThat(blockchainEvents.get(0).getIsProcessed()).isTrue();
         }
@@ -242,12 +279,20 @@ class EvidenceSyncServiceIntegrationTest {
         @Test
         void cleanupOldEvents_DeletesEventsBeforeCutoffBlock() {
                 // Given
+                String contractAddress = generateUniqueContractAddress();
+                String oldTransactionHash = generateUniqueTransactionHash();
+                String recentTransactionHash = generateUniqueTransactionHash();
+                String transactionHash = generateUniqueTransactionHash();
+                String evidenceId = generateUniqueEvidenceId();
+                String userAddress = "0x1234567890123456789012345678901234567890";
+                String hashValue = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+                
                 // Create old blockchain event
                 BlockchainEvent oldEvent = new BlockchainEvent(
-                                "0xContractAddress",
+                                contractAddress,
                                 "EvidenceSubmitted",
                                 BigInteger.valueOf(500),
-                                "0xOldTransactionHash",
+                                oldTransactionHash,
                                 BigInteger.valueOf(0),
                                 BigInteger.valueOf(1234567890),
                                 "{\"test\":\"data\"}");
@@ -257,10 +302,10 @@ class EvidenceSyncServiceIntegrationTest {
 
                 // Create recent blockchain event
                 BlockchainEvent recentEvent = new BlockchainEvent(
-                                "0xContractAddress",
+                                contractAddress,
                                 "EvidenceSubmitted",
                                 BigInteger.valueOf(1500),
-                                "0xRecentTransactionHash",
+                                recentTransactionHash,
                                 BigInteger.valueOf(0),
                                 BigInteger.valueOf(1234567890),
                                 "{\"test\":\"data\"}");
@@ -270,16 +315,16 @@ class EvidenceSyncServiceIntegrationTest {
 
                 // Create evidence with high block number
                 EvidenceEntity evidence = new EvidenceEntity(
-                                "EVID:1234567890:CN-001",
-                                "0x1234567890123456789012345678901234567890",
+                                evidenceId,
+                                userAddress,
                                 "test_file.pdf",
                                 "application/pdf",
                                 1024L,
                                 BigInteger.valueOf(1234567890),
                                 "SHA256",
-                                "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                                hashValue,
                                 BigInteger.valueOf(2500),
-                                "0xTransactionHash",
+                                transactionHash,
                                 BigInteger.valueOf(1234567890),
                                 "Test evidence memo");
                 evidenceRepository.save(evidence);
@@ -296,20 +341,26 @@ class EvidenceSyncServiceIntegrationTest {
         @Test
         void reprocessUnprocessedEvents_ProcessesUnprocessedEvents() {
                 // Given
+                String contractAddress = generateUniqueContractAddress();
+                String transactionHash = generateUniqueTransactionHash();
+                String evidenceId = generateUniqueEvidenceId();
+                String userAddress = "0x1234567890123456789012345678901234567890";
+                String hashValue = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+                
                 // Create unprocessed blockchain event
                 BlockchainEvent unprocessedEvent = new BlockchainEvent(
-                                "0xContractAddress",
+                                contractAddress,
                                 "EvidenceSubmitted",
                                 BigInteger.valueOf(100),
-                                "0xTransactionHash",
+                                transactionHash,
                                 BigInteger.valueOf(0),
                                 BigInteger.valueOf(1234567890),
-                                "{\"evidenceId\":\"EVID:1234567890:CN-001\",\"user\":\"0x1234567890123456789012345678901234567890\",\"hashValue\":\"0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\",\"timestamp\":\"1234567890\"}");
+                                "{\"evidenceId\":\"" + evidenceId + "\",\"user\":\"" + userAddress + "\",\"hashValue\":\"" + hashValue + "\",\"timestamp\":\"1234567890\"}");
                 unprocessedEvent.setIsProcessed(false);
                 blockchainEventRepository.save(unprocessedEvent);
 
                 // Create sync status
-                SyncStatus syncStatus = new SyncStatus("0xContractAddress", BigInteger.valueOf(50));
+                SyncStatus syncStatus = new SyncStatus(contractAddress, BigInteger.valueOf(50));
                 syncStatusRepository.save(syncStatus);
 
                 // When
@@ -317,7 +368,7 @@ class EvidenceSyncServiceIntegrationTest {
 
                 // Then
                 List<BlockchainEvent> processedEvents = blockchainEventRepository
-                                .findByTransactionHash("0xTransactionHash");
+                                .findByTransactionHash(transactionHash);
                 assertThat(processedEvents).hasSize(1);
                 assertThat(processedEvents.get(0).getIsProcessed()).isTrue();
                 assertThat(processedEvents.get(0).getProcessedAt()).isNotNull();

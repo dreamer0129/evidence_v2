@@ -9,6 +9,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -23,19 +24,30 @@ class UserRepositoryTest {
     @Autowired
     private UserRepository userRepository;
 
+    private String generateUniqueUsername() {
+        return "user_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    private String generateUniqueEmail() {
+        return "test_" + UUID.randomUUID().toString().substring(0, 8) + "@example.com";
+    }
+
     @Test
     void findByUsername_ExistingUser_ReturnsUser() {
+        String username = generateUniqueUsername();
+        String email = generateUniqueEmail();
+        
         User user = new User();
-        user.setUsername("testuser");
-        user.setEmail("test@example.com");
+        user.setUsername(username);
+        user.setEmail(email);
         user.setPassword("password123");
         entityManager.persistAndFlush(user);
 
-        Optional<User> found = userRepository.findByUsername("testuser");
+        Optional<User> found = userRepository.findByUsername(username);
 
         assertThat(found).isPresent();
-        assertThat(found.get().getUsername()).isEqualTo("testuser");
-        assertThat(found.get().getEmail()).isEqualTo("test@example.com");
+        assertThat(found.get().getUsername()).isEqualTo(username);
+        assertThat(found.get().getEmail()).isEqualTo(email);
     }
 
     @Test
@@ -47,27 +59,33 @@ class UserRepositoryTest {
 
     @Test
     void findByEmail_ExistingUser_ReturnsUser() {
+        String username = generateUniqueUsername();
+        String email = generateUniqueEmail();
+        
         User user = new User();
-        user.setUsername("testuser");
-        user.setEmail("test@example.com");
+        user.setUsername(username);
+        user.setEmail(email);
         user.setPassword("password123");
         entityManager.persistAndFlush(user);
 
-        Optional<User> found = userRepository.findByEmail("test@example.com");
+        Optional<User> found = userRepository.findByEmail(email);
 
         assertThat(found).isPresent();
-        assertThat(found.get().getEmail()).isEqualTo("test@example.com");
+        assertThat(found.get().getEmail()).isEqualTo(email);
     }
 
     @Test
     void existsByUsername_ExistingUser_ReturnsTrue() {
+        String username = generateUniqueUsername();
+        String email = generateUniqueEmail();
+        
         User user = new User();
-        user.setUsername("testuser");
-        user.setEmail("test@example.com");
+        user.setUsername(username);
+        user.setEmail(email);
         user.setPassword("password123");
         entityManager.persistAndFlush(user);
 
-        boolean exists = userRepository.existsByUsername("testuser");
+        boolean exists = userRepository.existsByUsername(username);
 
         assertThat(exists).isTrue();
     }
@@ -81,13 +99,16 @@ class UserRepositoryTest {
 
     @Test
     void existsByEmail_ExistingUser_ReturnsTrue() {
+        String username = generateUniqueUsername();
+        String email = generateUniqueEmail();
+        
         User user = new User();
-        user.setUsername("testuser");
-        user.setEmail("test@example.com");
+        user.setUsername(username);
+        user.setEmail(email);
         user.setPassword("password123");
         entityManager.persistAndFlush(user);
 
-        boolean exists = userRepository.existsByEmail("test@example.com");
+        boolean exists = userRepository.existsByEmail(email);
 
         assertThat(exists).isTrue();
     }
