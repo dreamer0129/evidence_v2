@@ -1,23 +1,20 @@
 package cn.edu.gfkd.evidence.service;
 
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
 import cn.edu.gfkd.evidence.entity.EvidenceEntity;
 import cn.edu.gfkd.evidence.exception.EvidenceNotFoundException;
 import cn.edu.gfkd.evidence.repository.EvidenceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
-import java.util.List;
-import java.util.Optional;
-
-@Service
-@RequiredArgsConstructor
-@Transactional
-@Slf4j
+@Service @RequiredArgsConstructor @Slf4j
 public class EvidenceService {
 
     private final EvidenceRepository evidenceRepository;
@@ -45,68 +42,55 @@ public class EvidenceService {
         }
     }
 
-    @Transactional(readOnly = true)
     public Optional<EvidenceEntity> getEvidenceById(Long id) {
         return evidenceRepository.findById(id);
     }
 
-    @Transactional(readOnly = true)
     public Optional<EvidenceEntity> getEvidenceByEvidenceId(String evidenceId) {
         return evidenceRepository.findByEvidenceId(evidenceId);
     }
 
-    @Transactional(readOnly = true)
     public Optional<EvidenceEntity> getEvidenceByTransactionHash(String transactionHash) {
         return evidenceRepository.findByTransactionHash(transactionHash);
     }
 
-    @Transactional(readOnly = true)
     public List<EvidenceEntity> getEvidenceByUserAddress(String userAddress) {
         return evidenceRepository.findByUserAddress(userAddress);
     }
 
-    @Transactional(readOnly = true)
     public List<EvidenceEntity> getEvidenceByHashValue(String hashValue) {
         return evidenceRepository.findByHashValue(hashValue);
     }
 
-    @Transactional(readOnly = true)
     public List<EvidenceEntity> getEvidenceByStatus(String status) {
         return evidenceRepository.findByStatus(status);
     }
 
-    @Transactional(readOnly = true)
     public Page<EvidenceEntity> getEvidenceByUserAddress(String userAddress, Pageable pageable) {
         return evidenceRepository.findByUserAddress(userAddress, pageable);
     }
 
-    @Transactional(readOnly = true)
     public Page<EvidenceEntity> getEvidenceByStatus(String status, Pageable pageable) {
         return evidenceRepository.findByStatus(status, pageable);
     }
 
-    @Transactional(readOnly = true)
-    public Page<EvidenceEntity> searchEvidence(String evidenceId, String userAddress,
-            String status, Pageable pageable) {
+    public Page<EvidenceEntity> searchEvidence(String evidenceId, String userAddress, String status,
+            Pageable pageable) {
         return evidenceRepository.findByFilters(evidenceId, userAddress, status, pageable);
     }
 
-    @Transactional(readOnly = true)
     public long countByUserAddress(String userAddress) {
         return evidenceRepository.countByUserAddress(userAddress);
     }
 
-    @Transactional(readOnly = true)
     public long countByStatus(String status) {
         return evidenceRepository.countByStatus(status);
     }
 
-    @Transactional(readOnly = true)
     public boolean existsByEvidenceId(String evidenceId) {
         return evidenceRepository.existsByEvidenceId(evidenceId);
     }
 
-    @Transactional(readOnly = true)
     public boolean existsByTransactionHash(String transactionHash) {
         return evidenceRepository.existsByTransactionHash(transactionHash);
     }
@@ -126,20 +110,19 @@ public class EvidenceService {
     }
 
     public void deleteEvidenceByEvidenceId(String evidenceId) {
-        EvidenceEntity evidence = evidenceRepository.findByEvidenceId(evidenceId)
-                .orElseThrow(() -> new EvidenceNotFoundException("Evidence not found: " + evidenceId));
+        EvidenceEntity evidence = evidenceRepository.findByEvidenceId(evidenceId).orElseThrow(
+                () -> new EvidenceNotFoundException("Evidence not found: " + evidenceId));
         evidenceRepository.delete(evidence);
         log.info("Deleted evidence with evidence ID: {}", evidenceId);
     }
 
     // Additional methods for statistics
-    @Transactional(readOnly = true)
     public long count() {
         return evidenceRepository.count();
     }
 
     // Fixed N+1 query problem by using repository method instead of stream filter
-    @Transactional(readOnly = true)
+
     public long countByUserAddressAndStatus(String userAddress, String status) {
         return evidenceRepository.countByUserAddressAndStatus(userAddress, status);
     }

@@ -1,9 +1,10 @@
 package cn.edu.gfkd.evidence.integration;
 
-import cn.edu.gfkd.evidence.dto.UserRegistrationDto;
-import cn.edu.gfkd.evidence.entity.User;
-import cn.edu.gfkd.evidence.repository.UserRepository;
-import cn.edu.gfkd.evidence.service.UserService;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,18 +12,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
-import java.util.UUID;
+import cn.edu.gfkd.evidence.dto.UserRegistrationDto;
+import cn.edu.gfkd.evidence.entity.User;
+import cn.edu.gfkd.evidence.repository.UserRepository;
+import cn.edu.gfkd.evidence.service.UserService;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-@SpringBootTest
-@ActiveProfiles("test")
-@Transactional
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@SpringBootTest @ActiveProfiles("test") @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class UserServiceIntegrationTest {
 
     @Autowired
@@ -95,7 +91,7 @@ class UserServiceIntegrationTest {
     void registerUser_DuplicateEmail_ThrowsException() {
         // Given
         String duplicateEmail = generateUniqueEmail();
-        
+
         UserRegistrationDto firstDto = new UserRegistrationDto();
         firstDto.setUsername("firstuser");
         firstDto.setEmail(duplicateEmail);
@@ -111,8 +107,7 @@ class UserServiceIntegrationTest {
 
         // Then
         assertThatThrownBy(() -> userService.registerUser(secondDto))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Email already exists");
+                .isInstanceOf(RuntimeException.class).hasMessageContaining("Email already exists");
     }
 
     @Test
@@ -262,7 +257,7 @@ class UserServiceIntegrationTest {
         // Given
         String username1 = generateUniqueUsername();
         String username2 = generateUniqueUsername();
-        
+
         UserRegistrationDto dto1 = new UserRegistrationDto();
         dto1.setUsername(username1);
         dto1.setEmail("test1@example.com");
@@ -289,7 +284,7 @@ class UserServiceIntegrationTest {
         // Given
         String email1 = "Test1@example.com";
         String email2 = "Test2@example.com";
-        
+
         UserRegistrationDto dto1 = new UserRegistrationDto();
         dto1.setUsername(generateUniqueUsername());
         dto1.setEmail(email1);

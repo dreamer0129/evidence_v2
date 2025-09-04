@@ -1,8 +1,9 @@
 package cn.edu.gfkd.evidence.integration;
 
-import cn.edu.gfkd.evidence.entity.User;
-import cn.edu.gfkd.evidence.repository.UserRepository;
-import cn.edu.gfkd.evidence.service.UserDetailsServiceImpl;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,17 +12,12 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
+import cn.edu.gfkd.evidence.entity.User;
+import cn.edu.gfkd.evidence.repository.UserRepository;
+import cn.edu.gfkd.evidence.service.UserDetailsServiceImpl;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-@SpringBootTest
-@ActiveProfiles("test")
-@Transactional
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@SpringBootTest @ActiveProfiles("test") @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class UserDetailsServiceImplIntegrationTest {
 
     @Autowired
@@ -43,7 +39,7 @@ class UserDetailsServiceImplIntegrationTest {
         // Given
         String username = generateUniqueUsername();
         String email = generateUniqueEmail();
-        
+
         User user = new User();
         user.setUsername(username);
         user.setEmail(email);
@@ -59,8 +55,7 @@ class UserDetailsServiceImplIntegrationTest {
         assertThat(result.getUsername()).isEqualTo(username);
         assertThat(result.getPassword()).isEqualTo("encodedPassword");
         assertThat(result.getAuthorities()).hasSize(1);
-        assertThat(result.getAuthorities().iterator().next().getAuthority())
-                .isEqualTo("ROLE_USER");
+        assertThat(result.getAuthorities().iterator().next().getAuthority()).isEqualTo("ROLE_USER");
     }
 
     @Test
@@ -76,7 +71,7 @@ class UserDetailsServiceImplIntegrationTest {
         // Given
         String username1 = "TestUser_" + UUID.randomUUID().toString().substring(0, 4);
         String username2 = "testuser_" + UUID.randomUUID().toString().substring(0, 4);
-        
+
         User user1 = new User();
         user1.setUsername(username1);
         user1.setEmail(generateUniqueEmail());
@@ -105,7 +100,7 @@ class UserDetailsServiceImplIntegrationTest {
         // Given
         String adminUsername = "admin_" + UUID.randomUUID().toString().substring(0, 4);
         String regularUsername = "user_" + UUID.randomUUID().toString().substring(0, 4);
-        
+
         User adminUser = new User();
         adminUser.setUsername(adminUsername);
         adminUser.setEmail(generateUniqueEmail());
@@ -139,7 +134,7 @@ class UserDetailsServiceImplIntegrationTest {
         // Given
         String username = "user_" + UUID.randomUUID().toString().substring(0, 4) + "@domain.com";
         String email = generateUniqueEmail();
-        
+
         User user = new User();
         user.setUsername(username);
         user.setEmail(email);

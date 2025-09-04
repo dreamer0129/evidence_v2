@@ -1,24 +1,15 @@
 package cn.edu.gfkd.evidence.service;
 
 import java.math.BigInteger;
-import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
-import org.web3j.utils.Numeric;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import cn.edu.gfkd.evidence.entity.BlockchainEvent;
-import cn.edu.gfkd.evidence.entity.EvidenceEntity;
-import cn.edu.gfkd.evidence.entity.SyncStatus;
-import cn.edu.gfkd.evidence.exception.EvidenceNotFoundException;
 import cn.edu.gfkd.evidence.exception.SyncException;
 import cn.edu.gfkd.evidence.generated.EvidenceStorageContract;
 import cn.edu.gfkd.evidence.repository.BlockchainEventRepository;
@@ -27,7 +18,7 @@ import cn.edu.gfkd.evidence.repository.SyncStatusRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@Service @RequiredArgsConstructor @Transactional @Slf4j
+@Service @RequiredArgsConstructor @Slf4j
 public class EvidenceSyncService {
 
     private final EvidenceRepository evidenceRepository;
@@ -48,10 +39,11 @@ public class EvidenceSyncService {
 
         for (BlockchainEvent event : unprocessedEvents) {
             try {
-                log.info("Reprocessing event: {} for evidenceId: {}", event.getEventName(), 
+                log.info("Reprocessing event: {} for evidenceId: {}", event.getEventName(),
                         parseEvidenceIdFromRawData(event.getRawData()));
                 // 直接调用 EvidenceEventListener 的同步处理方法
-                blockchainEventListener.syncPastEvents(event.getBlockNumber(), event.getBlockNumber());
+                blockchainEventListener.syncPastEvents(event.getBlockNumber(),
+                        event.getBlockNumber());
             } catch (Exception e) {
                 log.error("Failed to reprocess event with transaction hash: {}",
                         event.getTransactionHash(), e);

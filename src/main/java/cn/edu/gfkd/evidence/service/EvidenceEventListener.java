@@ -10,7 +10,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameter;
 import org.web3j.protocol.core.DefaultBlockParameterName;
@@ -130,7 +129,6 @@ public class EvidenceEventListener {
         return evidenceStorageContract.getContractAddress();
     }
 
-    @Transactional
     public void syncPastEvents(BigInteger startBlock, BigInteger endBlock) {
         try {
             log.info("Syncing past events from block {} to {}", startBlock, endBlock);
@@ -211,7 +209,6 @@ public class EvidenceEventListener {
         }
     }
 
-    @Transactional
     private void processEvidenceSubmitted(
             EvidenceStorageContract.EvidenceSubmittedEventResponse event) {
         try {
@@ -246,7 +243,6 @@ public class EvidenceEventListener {
         }
     }
 
-    @Transactional
     private void processEvidenceStatusChanged(
             EvidenceStorageContract.EvidenceStatusChangedEventResponse event) {
         try {
@@ -282,7 +278,6 @@ public class EvidenceEventListener {
         }
     }
 
-    @Transactional
     private void processEvidenceRevoked(
             EvidenceStorageContract.EvidenceRevokedEventResponse event) {
         try {
@@ -551,16 +546,18 @@ public class EvidenceEventListener {
             EvidenceEntity evidence = getCompleteEvidenceFromContract(evidenceId);
             if (evidence == null) {
                 // 如果合约调用失败，不存储该证据，留着后期再处理
-                log.warn("Failed to get complete evidence from contract for {}, will retry later", evidenceId);
-                throw new BlockchainException("Failed to retrieve evidence from contract: " + evidenceId);
+                log.warn("Failed to get complete evidence from contract for {}, will retry later",
+                        evidenceId);
+                throw new BlockchainException(
+                        "Failed to retrieve evidence from contract: " + evidenceId);
             }
 
             // 设置区块链特定字段
             evidence.setTransactionHash(transactionHash);
             evidence.setStatus("effective");
-            
+
             EvidenceEntity savedEvidence = evidenceRepository.save(evidence);
-            log.info("Created new evidence record for evidenceId: {} with id: {} from contract", 
+            log.info("Created new evidence record for evidenceId: {} with id: {} from contract",
                     evidenceId, savedEvidence.getId());
             return null;
         }, "processEvidenceSubmittedSync");
@@ -678,8 +675,7 @@ public class EvidenceEventListener {
             processEvidenceStatusChangedSync(evidenceId, oldStatus, newStatus, null);
         } catch (Exception e) {
             log.error("Failed to process EvidenceStatusChanged from event", e);
-            throw new BlockchainException("Failed to process EvidenceStatusChanged from event",
-                    e);
+            throw new BlockchainException("Failed to process EvidenceStatusChanged from event", e);
         }
     }
 

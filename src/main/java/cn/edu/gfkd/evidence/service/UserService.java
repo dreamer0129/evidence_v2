@@ -1,22 +1,19 @@
 package cn.edu.gfkd.evidence.service;
 
+import java.util.Optional;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
 import cn.edu.gfkd.evidence.dto.UserRegistrationDto;
 import cn.edu.gfkd.evidence.entity.User;
 import cn.edu.gfkd.evidence.exception.UserNotFoundException;
 import cn.edu.gfkd.evidence.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
-import java.util.Optional;
-
-@Service
-@RequiredArgsConstructor
-@Transactional
-@Slf4j
+@Service @RequiredArgsConstructor @Slf4j
 public class UserService {
 
     private final UserRepository userRepository;
@@ -24,11 +21,12 @@ public class UserService {
 
     public User registerUser(UserRegistrationDto registrationDto) {
         validateRegistrationDto(registrationDto);
-        
+
         log.info("Registering new user: {}", registrationDto.getUsername());
-        
+
         if (userRepository.existsByUsername(registrationDto.getUsername())) {
-            throw new UserNotFoundException("Username already exists: " + registrationDto.getUsername());
+            throw new UserNotFoundException(
+                    "Username already exists: " + registrationDto.getUsername());
         }
 
         if (userRepository.existsByEmail(registrationDto.getEmail())) {
@@ -45,7 +43,7 @@ public class UserService {
         log.info("Successfully registered user with ID: {}", savedUser.getId());
         return savedUser;
     }
-    
+
     private void validateRegistrationDto(UserRegistrationDto dto) {
         if (dto == null) {
             throw new IllegalArgumentException("Registration data cannot be null");
@@ -61,12 +59,10 @@ public class UserService {
         }
     }
 
-    @Transactional(readOnly = true)
     public Optional<User> findByUsername(String username) {
         return userRepository.findByUsername(username);
     }
 
-    @Transactional(readOnly = true)
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
     }
