@@ -1,18 +1,22 @@
 package cn.edu.gfkd.evidence.entity;
 
-import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.math.BigInteger;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "evidence")
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+@Entity @Table(name = "evidence")
 public class EvidenceEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(unique = true, nullable = false, length = 100)
@@ -62,21 +66,19 @@ public class EvidenceEntity {
     @Column(name = "revoker_address", length = 42)
     private String revokerAddress;
 
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreationTimestamp @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
+    @UpdateTimestamp @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
     public EvidenceEntity() {
     }
 
-    public EvidenceEntity(String evidenceId, String userAddress, String fileName,
-            String mimeType, Long fileSize, BigInteger fileCreationTime,
-            String hashAlgorithm, String hashValue, BigInteger blockNumber,
-            String transactionHash, BigInteger blockTimestamp, String memo) {
+    public EvidenceEntity(String evidenceId, String userAddress, String fileName, String mimeType,
+            Long fileSize, BigInteger fileCreationTime, String hashAlgorithm, String hashValue,
+            BigInteger blockNumber, String transactionHash, BigInteger blockTimestamp,
+            String memo) {
         this.evidenceId = evidenceId;
         this.userAddress = userAddress;
         this.fileName = fileName;

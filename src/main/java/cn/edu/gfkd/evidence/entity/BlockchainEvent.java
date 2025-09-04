@@ -55,6 +55,7 @@ public class BlockchainEvent {
         this.blockTimestamp = blockTimestamp;
         this.rawData = rawData;
         this.processedAt = LocalDateTime.now();
+        this.isProcessed = false;
     }
 
     // Getters and Setters

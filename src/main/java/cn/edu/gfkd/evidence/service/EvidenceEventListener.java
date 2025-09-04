@@ -11,8 +11,6 @@ import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
-import org.web3j.utils.Numeric;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameter;
 import org.web3j.protocol.core.DefaultBlockParameterName;
@@ -23,6 +21,7 @@ import org.web3j.protocol.core.methods.response.Log;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.utils.Numeric;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import cn.edu.gfkd.evidence.entity.BlockchainEvent;
@@ -65,6 +64,9 @@ public class EvidenceEventListener {
         try {
             // Start event listening after a delay
             scheduler.schedule(this::startEventListening, 3, TimeUnit.SECONDS);
+
+            // Start unprocessed events processor with periodic execution
+            scheduler.scheduleAtFixedRate(this::processUnprocessedEvents, 30, 60, TimeUnit.SECONDS);
 
         } catch (Exception e) {
             log.error("Failed to initialize blockchain event listener", e);
@@ -199,15 +201,6 @@ public class EvidenceEventListener {
             log.debug("No EvidenceStatusChanged events found in receipt");
         }
 
-        // Process EvidenceVerified events
-        try {
-            List<EvidenceStorageContract.EvidenceVerifiedEventResponse> verifiedEvents = EvidenceStorageContract
-                    .getEvidenceVerifiedEvents(receipt);
-            verifiedEvents.forEach(this::processEvidenceVerified);
-        } catch (Exception e) {
-            log.debug("No EvidenceVerified events found in receipt");
-        }
-
         // Process EvidenceRevoked events
         try {
             List<EvidenceStorageContract.EvidenceRevokedEventResponse> revokedEvents = EvidenceStorageContract
@@ -218,89 +211,106 @@ public class EvidenceEventListener {
         }
     }
 
+    @Transactional
     private void processEvidenceSubmitted(
             EvidenceStorageContract.EvidenceSubmittedEventResponse event) {
         try {
             BigInteger blockTimestamp = getBlockTimestamp(event.log.getBlockNumber());
 
+            // 第一步：立即存储事件到数据库
             executeWithRetry(() -> {
                 BlockchainEvent blockchainEvent = createBlockchainEvent(event, "EvidenceSubmitted",
                         blockTimestamp);
-                blockchainEventRepository.save(blockchainEvent);
+                BlockchainEvent savedEvent = blockchainEventRepository.save(blockchainEvent);
+                log.info("Saved blockchain event with id: {} for evidenceId: {}",
+                        savedEvent.getId(), event.evidenceId);
                 return null;
             }, "save EvidenceSubmitted event");
 
-            // 直接处理证据提交事件
-            processEvidenceSubmittedSync(event.evidenceId, event.user, Numeric.toHexString(event.hashValue), 
-                    event.timestamp, event.log.getBlockNumber(), event.log.getTransactionHash(), blockTimestamp);
+            // 第二步：异步处理事件（处理失败不会影响事件存储）
+            try {
+                processEvidenceSubmittedSync(event.evidenceId, event.log.getTransactionHash());
+                // 处理成功后标记事件为已处理
+                markEventAsProcessed(event.log.getTransactionHash(), "EvidenceSubmitted");
+            } catch (Exception processingError) {
+                log.error(
+                        "Failed to process EvidenceSubmitted event for evidenceId: {}, but event was saved. Will retry later.",
+                        event.evidenceId, processingError);
+                // 事件已保存但处理失败，保持未处理状态，后续会重试
+            }
 
-            log.info("EvidenceSubmitted event processed for evidenceId: {}", event.evidenceId);
+            log.info("EvidenceSubmitted event received for evidenceId: {}", event.evidenceId);
         } catch (Exception e) {
             log.error("Error processing EvidenceSubmitted event", e);
             throw new BlockchainException("Failed to process EvidenceSubmitted event", e);
         }
     }
 
+    @Transactional
     private void processEvidenceStatusChanged(
             EvidenceStorageContract.EvidenceStatusChangedEventResponse event) {
         try {
             BigInteger blockTimestamp = getBlockTimestamp(event.log.getBlockNumber());
 
+            // 第一步：立即存储事件到数据库
             executeWithRetry(() -> {
                 BlockchainEvent blockchainEvent = createBlockchainEvent(event,
                         "EvidenceStatusChanged", blockTimestamp);
-                blockchainEventRepository.save(blockchainEvent);
+                BlockchainEvent savedEvent = blockchainEventRepository.save(blockchainEvent);
+                log.info("Saved blockchain event with id: {} for evidenceId: {}",
+                        savedEvent.getId(), event.evidenceId);
                 return null;
             }, "save EvidenceStatusChanged event");
 
-            // 直接处理证据状态变更事件
-            processEvidenceStatusChangedSync(event.evidenceId, event.oldStatus, event.newStatus, null);
+            // 第二步：异步处理事件（处理失败不会影响事件存储）
+            try {
+                processEvidenceStatusChangedSync(event.evidenceId, event.oldStatus, event.newStatus,
+                        null);
+                // 处理成功后标记事件为已处理
+                markEventAsProcessed(event.log.getTransactionHash(), "EvidenceStatusChanged");
+            } catch (Exception processingError) {
+                log.error(
+                        "Failed to process EvidenceStatusChanged event for evidenceId: {}, but event was saved. Will retry later.",
+                        event.evidenceId, processingError);
+                // 事件已保存但处理失败，保持未处理状态，后续会重试
+            }
 
-            log.info("EvidenceStatusChanged event processed for evidenceId: {}", event.evidenceId);
+            log.info("EvidenceStatusChanged event received for evidenceId: {}", event.evidenceId);
         } catch (Exception e) {
             log.error("Error processing EvidenceStatusChanged event", e);
             throw new BlockchainException("Failed to process EvidenceStatusChanged event", e);
         }
     }
 
-    private void processEvidenceVerified(
-            EvidenceStorageContract.EvidenceVerifiedEventResponse event) {
-        try {
-            BigInteger blockTimestamp = getBlockTimestamp(event.log.getBlockNumber());
-
-            executeWithRetry(() -> {
-                BlockchainEvent blockchainEvent = createBlockchainEvent(event, "EvidenceVerified",
-                        blockTimestamp);
-                blockchainEventRepository.save(blockchainEvent);
-                return null;
-            }, "save EvidenceVerified event");
-
-            // 直接处理证据验证事件
-            processEvidenceVerifiedSync(event.evidenceId, event.isValid);
-
-            log.info("EvidenceVerified event processed for evidenceId: {}", event.evidenceId);
-        } catch (Exception e) {
-            log.error("Error processing EvidenceVerified event", e);
-            throw new BlockchainException("Failed to process EvidenceVerified event", e);
-        }
-    }
-
+    @Transactional
     private void processEvidenceRevoked(
             EvidenceStorageContract.EvidenceRevokedEventResponse event) {
         try {
             BigInteger blockTimestamp = getBlockTimestamp(event.log.getBlockNumber());
 
+            // 第一步：立即存储事件到数据库
             executeWithRetry(() -> {
                 BlockchainEvent blockchainEvent = createBlockchainEvent(event, "EvidenceRevoked",
                         blockTimestamp);
-                blockchainEventRepository.save(blockchainEvent);
+                BlockchainEvent savedEvent = blockchainEventRepository.save(blockchainEvent);
+                log.info("Saved blockchain event with id: {} for evidenceId: {}",
+                        savedEvent.getId(), event.evidenceId);
                 return null;
             }, "save EvidenceRevoked event");
 
-            // 直接处理证据撤销事件
-            processEvidenceRevokedSync(event.evidenceId, event.revoker);
+            // 第二步：异步处理事件（处理失败不会影响事件存储）
+            try {
+                processEvidenceRevokedSync(event.evidenceId, event.revoker);
+                // 处理成功后标记事件为已处理
+                markEventAsProcessed(event.log.getTransactionHash(), "EvidenceRevoked");
+            } catch (Exception processingError) {
+                log.error(
+                        "Failed to process EvidenceRevoked event for evidenceId: {}, but event was saved. Will retry later.",
+                        event.evidenceId, processingError);
+                // 事件已保存但处理失败，保持未处理状态，后续会重试
+            }
 
-            log.info("EvidenceRevoked event processed for evidenceId: {}", event.evidenceId);
+            log.info("EvidenceRevoked event received for evidenceId: {}", event.evidenceId);
         } catch (Exception e) {
             log.error("Error processing EvidenceRevoked event", e);
             throw new BlockchainException("Failed to process EvidenceRevoked event", e);
@@ -313,11 +323,17 @@ public class EvidenceEventListener {
 
         // Cast to BaseEventResponse to access public log field directly
         org.web3j.protocol.core.methods.response.BaseEventResponse baseEvent = (org.web3j.protocol.core.methods.response.BaseEventResponse) event;
-        org.web3j.protocol.core.methods.response.Log log = baseEvent.log;
+        org.web3j.protocol.core.methods.response.Log eventLog = baseEvent.log;
 
-        return new BlockchainEvent(evidenceStorageContract.getContractAddress(), eventType,
-                log.getBlockNumber(), log.getTransactionHash(),
-                blockTimestamp, rawData);
+        BlockchainEvent blockchainEvent = new BlockchainEvent(
+                evidenceStorageContract.getContractAddress(), eventType, eventLog.getBlockNumber(),
+                eventLog.getTransactionHash(), blockTimestamp, rawData);
+
+        log.info("Created blockchain event: contract={}, eventType={}, blockNumber={}, txHash={}",
+                blockchainEvent.getContractAddress(), blockchainEvent.getEventName(),
+                blockchainEvent.getBlockNumber(), blockchainEvent.getTransactionHash());
+
+        return blockchainEvent;
     }
 
     private void updateSyncStatus(BigInteger blockNumber) {
@@ -329,6 +345,23 @@ public class EvidenceEventListener {
             syncStatusRepository.save(syncStatus);
             return null;
         }, "update sync status");
+    }
+
+    private void markEventAsProcessed(String transactionHash, String eventType) {
+        executeWithRetry(() -> {
+            List<BlockchainEvent> events = blockchainEventRepository
+                    .findByTransactionHash(transactionHash);
+            for (BlockchainEvent event : events) {
+                if (event.getEventName().equals(eventType) && !event.getIsProcessed()) {
+                    event.setIsProcessed(true);
+                    event.setProcessedAt(LocalDateTime.now());
+                    blockchainEventRepository.save(event);
+                    log.info("Marked event as processed: id={}, transactionHash={}, eventType={}",
+                            event.getId(), transactionHash, eventType);
+                }
+            }
+            return null;
+        }, "mark event as processed");
     }
 
     private SyncStatus getOrCreateSyncStatus() {
@@ -506,8 +539,7 @@ public class EvidenceEventListener {
     }
 
     // 同步处理方法实现
-    private void processEvidenceSubmittedSync(String evidenceId, String user, String hashValue, 
-            BigInteger timestamp, BigInteger blockNumber, String transactionHash, BigInteger blockTimestamp) {
+    private void processEvidenceSubmittedSync(String evidenceId, String transactionHash) {
         executeWithRetry(() -> {
             // 检查证据是否已存在
             if (evidenceRepository.existsByEvidenceId(evidenceId)) {
@@ -518,25 +550,27 @@ public class EvidenceEventListener {
             // 尝试从智能合约获取完整证据数据
             EvidenceEntity evidence = getCompleteEvidenceFromContract(evidenceId);
             if (evidence == null) {
-                // 如果合约调用失败，使用事件数据创建基本证据记录
-                evidence = new EvidenceEntity(evidenceId, user, "", "", 0L, timestamp, "SHA256", 
-                        hashValue, blockNumber, transactionHash, blockTimestamp, "");
-            } else {
-                // 更新区块链特定字段
-                evidence.setTransactionHash(transactionHash);
+                // 如果合约调用失败，不存储该证据，留着后期再处理
+                log.warn("Failed to get complete evidence from contract for {}, will retry later", evidenceId);
+                throw new BlockchainException("Failed to retrieve evidence from contract: " + evidenceId);
             }
 
+            // 设置区块链特定字段
+            evidence.setTransactionHash(transactionHash);
             evidence.setStatus("effective");
-            evidenceRepository.save(evidence);
-            log.info("Created new evidence record for evidenceId: {}", evidenceId);
+            
+            EvidenceEntity savedEvidence = evidenceRepository.save(evidence);
+            log.info("Created new evidence record for evidenceId: {} with id: {} from contract", 
+                    evidenceId, savedEvidence.getId());
             return null;
         }, "processEvidenceSubmittedSync");
     }
 
-    private void processEvidenceStatusChangedSync(String evidenceId, String oldStatus, String newStatus, String user) {
+    private void processEvidenceStatusChangedSync(String evidenceId, String oldStatus,
+            String newStatus, String user) {
         executeWithRetry(() -> {
-            EvidenceEntity evidence = evidenceRepository.findByEvidenceId(evidenceId)
-                    .orElseThrow(() -> new EvidenceNotFoundException("Evidence not found: " + evidenceId));
+            EvidenceEntity evidence = evidenceRepository.findByEvidenceId(evidenceId).orElseThrow(
+                    () -> new EvidenceNotFoundException("Evidence not found: " + evidenceId));
 
             evidence.setStatus(newStatus);
 
@@ -546,20 +580,126 @@ public class EvidenceEventListener {
             }
 
             evidenceRepository.save(evidence);
-            log.info("Updated evidence status from {} to {} for evidenceId: {}", oldStatus, newStatus, evidenceId);
+            log.info("Updated evidence status from {} to {} for evidenceId: {}", oldStatus,
+                    newStatus, evidenceId);
             return null;
         }, "processEvidenceStatusChangedSync");
     }
 
-    private void processEvidenceVerifiedSync(String evidenceId, Boolean isValid) {
-        log.info("Evidence verified for evidenceId: {}, isValid: {}", evidenceId, isValid != null ? isValid : "unknown");
-        // 验证操作不需要存储状态，只是记录日志
+    private void processUnprocessedEvents() {
+        try {
+            log.debug("Processing unprocessed blockchain events...");
+
+            // 获取未处理的事件，限制数量避免一次处理太多
+            List<BlockchainEvent> unprocessedEvents = blockchainEventRepository
+                    .findUnprocessedEvents(org.springframework.data.domain.PageRequest.of(0, 50));
+
+            if (unprocessedEvents.isEmpty()) {
+                log.debug("No unprocessed events found");
+                return;
+            }
+
+            log.info("Found {} unprocessed events to process", unprocessedEvents.size());
+
+            for (BlockchainEvent event : unprocessedEvents) {
+                try {
+                    processUnprocessedEvent(event);
+                } catch (Exception e) {
+                    log.error(
+                            "Failed to process unprocessed event id: {}, transactionHash: {}, eventType: {}. Will retry later.",
+                            event.getId(), event.getTransactionHash(), event.getEventName(), e);
+                    // 继续处理下一个事件
+                }
+            }
+
+            log.debug("Completed processing unprocessed events");
+        } catch (Exception e) {
+            log.error("Error processing unprocessed events", e);
+        }
+    }
+
+    private void processUnprocessedEvent(BlockchainEvent event) {
+        try {
+            log.info("Processing unprocessed event: id={}, transactionHash={}, eventType={}",
+                    event.getId(), event.getTransactionHash(), event.getEventName());
+
+            // 根据事件类型调用相应的处理方法
+            switch (event.getEventName()) {
+                case "EvidenceSubmitted":
+                    processEvidenceSubmittedFromEvent(event);
+                    break;
+                case "EvidenceStatusChanged":
+                    processEvidenceStatusChangedFromEvent(event);
+                    break;
+                case "EvidenceRevoked":
+                    processEvidenceRevokedFromEvent(event);
+                    break;
+                default:
+                    log.warn("Unknown event type: {}", event.getEventName());
+                    return;
+            }
+
+            // 处理成功后标记为已处理
+            event.setIsProcessed(true);
+            event.setProcessedAt(LocalDateTime.now());
+            blockchainEventRepository.save(event);
+
+            log.info(
+                    "Successfully processed unprocessed event: id={}, transactionHash={}, eventType={}",
+                    event.getId(), event.getTransactionHash(), event.getEventName());
+
+        } catch (Exception e) {
+            log.error(
+                    "Failed to process unprocessed event: id={}, transactionHash={}, eventType={}",
+                    event.getId(), event.getTransactionHash(), event.getEventName(), e);
+            throw e;
+        }
+    }
+
+    private void processEvidenceSubmittedFromEvent(BlockchainEvent event) {
+        try {
+            JsonNode jsonNode = objectMapper.readTree(event.getRawData());
+            String evidenceId = jsonNode.get("evidenceId").asText();
+
+            processEvidenceSubmittedSync(evidenceId, event.getTransactionHash());
+        } catch (Exception e) {
+            log.error("Failed to process EvidenceSubmitted from event", e);
+            throw new BlockchainException("Failed to process EvidenceSubmitted from event", e);
+        }
+    }
+
+    private void processEvidenceStatusChangedFromEvent(BlockchainEvent event) {
+        try {
+            JsonNode jsonNode = objectMapper.readTree(event.getRawData());
+            String evidenceId = jsonNode.get("evidenceId").asText();
+            String oldStatus = jsonNode.get("oldStatus").asText();
+            String newStatus = jsonNode.get("newStatus").asText();
+
+            processEvidenceStatusChangedSync(evidenceId, oldStatus, newStatus, null);
+        } catch (Exception e) {
+            log.error("Failed to process EvidenceStatusChanged from event", e);
+            throw new BlockchainException("Failed to process EvidenceStatusChanged from event",
+                    e);
+        }
+    }
+
+    private void processEvidenceRevokedFromEvent(BlockchainEvent event) {
+        try {
+            JsonNode jsonNode = objectMapper.readTree(event.getRawData());
+            String evidenceId = jsonNode.get("evidenceId").asText();
+            String revoker = jsonNode.get("revoker").asText();
+
+            processEvidenceRevokedSync(evidenceId, revoker);
+        } catch (Exception e) {
+            log.error("Failed to process EvidenceRevoked from event", e);
+            throw new BlockchainException("Failed to process EvidenceRevoked from event", e);
+        }
     }
 
     private void processEvidenceRevokedSync(String evidenceId, String revoker) {
         executeWithRetry(() -> {
-            EvidenceEntity evidence = evidenceRepository.findByEvidenceId(evidenceId)
-                    .orElseThrow(() -> new EvidenceNotFoundException("Evidence not found: " + evidenceId));
+            EvidenceEntity evidence = evidenceRepository.findByEvidenceId(evidenceId).orElseThrow(
+                    () -> new EvidenceNotFoundException("Evidence not found: " + evidenceId));
 
             evidence.setStatus("revoked");
             evidence.setRevokedAt(LocalDateTime.now());
@@ -582,17 +722,25 @@ public class EvidenceEventListener {
                         contractEvidence.userId != null ? contractEvidence.userId : "",
                         contractEvidence.metadata != null ? contractEvidence.metadata.fileName : "",
                         contractEvidence.metadata != null ? contractEvidence.metadata.mimeType : "",
-                        contractEvidence.metadata != null ? contractEvidence.metadata.size.longValue() : 0L,
-                        contractEvidence.metadata != null ? contractEvidence.metadata.size : BigInteger.ZERO,
+                        contractEvidence.metadata != null
+                                ? contractEvidence.metadata.size.longValue()
+                                : 0L,
+                        contractEvidence.metadata != null ? contractEvidence.metadata.size
+                                : BigInteger.ZERO,
                         contractEvidence.hash != null ? contractEvidence.hash.algorithm : "SHA256",
-                        contractEvidence.hash != null ? Numeric.toHexString(contractEvidence.hash.value) : "",
-                        contractEvidence.blockHeight != null ? contractEvidence.blockHeight : BigInteger.ZERO,
+                        contractEvidence.hash != null
+                                ? Numeric.toHexString(contractEvidence.hash.value)
+                                : "",
+                        contractEvidence.blockHeight != null ? contractEvidence.blockHeight
+                                : BigInteger.ZERO,
                         "", // transactionHash will be set by caller
-                        contractEvidence.timestamp != null ? contractEvidence.timestamp : BigInteger.ZERO,
+                        contractEvidence.timestamp != null ? contractEvidence.timestamp
+                                : BigInteger.ZERO,
                         contractEvidence.memo != null ? contractEvidence.memo : "");
             }
         } catch (Exception e) {
-            log.warn("Failed to retrieve evidence {} from smart contract: {}", evidenceId, e.getMessage());
+            log.error("Failed to retrieve evidence {} from smart contract: {}", evidenceId,
+                    e.getMessage());
         }
         return null;
     }
