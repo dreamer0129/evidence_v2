@@ -23,7 +23,7 @@ public interface BlockchainEventRepository extends JpaRepository<BlockchainEvent
     
     List<BlockchainEvent> findByBlockNumberGreaterThanAndIsProcessed(BigInteger blockNumber, Boolean isProcessed);
     
-    @Query("SELECT e FROM BlockchainEvent e WHERE e.isProcessed = false ORDER BY e.blockNumber ASC, e.logIndex ASC")
+    @Query("SELECT e FROM BlockchainEvent e WHERE e.isProcessed = false ORDER BY e.blockNumber ASC")
     List<BlockchainEvent> findUnprocessedEvents(Pageable pageable);
     
     @Query("SELECT MAX(e.blockNumber) FROM BlockchainEvent e WHERE e.isProcessed = true")
@@ -31,11 +31,11 @@ public interface BlockchainEventRepository extends JpaRepository<BlockchainEvent
     
     boolean existsByTransactionHash(String transactionHash);
     
-    @Query("SELECT e FROM BlockchainEvent e WHERE e.blockNumber >= :startBlock AND e.blockNumber <= :endBlock ORDER BY e.blockNumber ASC, e.logIndex ASC")
+    @Query("SELECT e FROM BlockchainEvent e WHERE e.blockNumber >= :startBlock AND e.blockNumber <= :endBlock ORDER BY e.blockNumber ASC")
     List<BlockchainEvent> findByBlockNumberRange(@Param("startBlock") BigInteger startBlock, 
                                                 @Param("endBlock") BigInteger endBlock);
     
-    @Query("SELECT e FROM BlockchainEvent e WHERE e.contractAddress = :contractAddress AND e.blockNumber >= :startBlock AND e.blockNumber <= :endBlock ORDER BY e.blockNumber ASC, e.logIndex ASC")
+    @Query("SELECT e FROM BlockchainEvent e WHERE e.contractAddress = :contractAddress AND e.blockNumber >= :startBlock AND e.blockNumber <= :endBlock ORDER BY e.blockNumber ASC")
     List<BlockchainEvent> findByContractAddressAndBlockNumberRange(@Param("contractAddress") String contractAddress,
                                                                   @Param("startBlock") BigInteger startBlock,
                                                                   @Param("endBlock") BigInteger endBlock);

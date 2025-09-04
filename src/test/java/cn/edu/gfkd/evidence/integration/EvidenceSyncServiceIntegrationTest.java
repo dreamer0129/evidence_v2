@@ -71,7 +71,6 @@ class EvidenceSyncServiceIntegrationTest {
                                 "EvidenceSubmitted",
                                 BigInteger.valueOf(100),
                                 transactionHash,
-                                BigInteger.valueOf(0),
                                 BigInteger.valueOf(1234567890),
                                 "{\"test\":\"data\"}");
                 blockchainEvent.setIsProcessed(true);
@@ -119,7 +118,6 @@ class EvidenceSyncServiceIntegrationTest {
                                 "EvidenceSubmitted",
                                 BigInteger.valueOf(500),
                                 oldTransactionHash,
-                                BigInteger.valueOf(0),
                                 BigInteger.valueOf(1234567890),
                                 "{\"test\":\"data\"}");
                 oldEvent.setIsProcessed(true);
@@ -132,7 +130,6 @@ class EvidenceSyncServiceIntegrationTest {
                                 "EvidenceSubmitted",
                                 BigInteger.valueOf(1500),
                                 recentTransactionHash,
-                                BigInteger.valueOf(0),
                                 BigInteger.valueOf(1234567890),
                                 "{\"test\":\"data\"}");
                 recentEvent.setIsProcessed(true);

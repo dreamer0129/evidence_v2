@@ -26,8 +26,6 @@ public class BlockchainEvent {
     @Column(name = "transaction_hash", nullable = false, length = 66, unique = true)
     private String transactionHash;
 
-    @Column(name = "log_index", nullable = false)
-    private BigInteger logIndex;
 
     @Column(name = "block_timestamp", nullable = false)
     private BigInteger blockTimestamp;
@@ -49,13 +47,11 @@ public class BlockchainEvent {
     }
 
     public BlockchainEvent(String contractAddress, String eventName, BigInteger blockNumber,
-            String transactionHash, BigInteger logIndex,
-            BigInteger blockTimestamp, String rawData) {
+            String transactionHash, BigInteger blockTimestamp, String rawData) {
         this.contractAddress = contractAddress;
         this.eventName = eventName;
         this.blockNumber = blockNumber;
         this.transactionHash = transactionHash;
-        this.logIndex = logIndex;
         this.blockTimestamp = blockTimestamp;
         this.rawData = rawData;
         this.processedAt = LocalDateTime.now();
@@ -102,13 +98,6 @@ public class BlockchainEvent {
         this.transactionHash = transactionHash;
     }
 
-    public BigInteger getLogIndex() {
-        return logIndex;
-    }
-
-    public void setLogIndex(BigInteger logIndex) {
-        this.logIndex = logIndex;
-    }
 
     public BigInteger getBlockTimestamp() {
         return blockTimestamp;

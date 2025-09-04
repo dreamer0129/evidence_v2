@@ -317,7 +317,7 @@ public class EvidenceEventListener {
 
         return new BlockchainEvent(evidenceStorageContract.getContractAddress(), eventType,
                 log.getBlockNumber(), log.getTransactionHash(),
-                BigInteger.valueOf(log.getLogIndex().longValue()), blockTimestamp, rawData);
+                blockTimestamp, rawData);
     }
 
     private void updateSyncStatus(BigInteger blockNumber) {

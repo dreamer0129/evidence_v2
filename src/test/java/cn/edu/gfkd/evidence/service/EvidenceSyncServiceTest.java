@@ -59,7 +59,6 @@ class EvidenceSyncServiceTest {
                                 "EvidenceSubmitted",
                                 BigInteger.valueOf(100),
                                 "0xTransactionHash",
-                                BigInteger.valueOf(0),
                                 BigInteger.valueOf(1234567890),
                                 "{\"evidenceId\":\"EVID:1234567890:CN-001\",\"user\":\"0x1234567890123456789012345678901234567890\",\"hashValue\":\"0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\",\"timestamp\":\"1234567890\"}");
         }
