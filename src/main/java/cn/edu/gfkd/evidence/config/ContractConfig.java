@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.web3j.crypto.Credentials;
+import org.web3j.protocol.Web3j;
 
 import cn.edu.gfkd.evidence.generated.EvidenceStorageContract;
 import cn.edu.gfkd.evidence.utils.ContractUtils;
@@ -24,6 +25,9 @@ public class ContractConfig {
     @Autowired
     private ContractGasProvider contractGasProvider;
 
+    @Autowired
+    private Web3j web3j;
+
     @Bean
     public EvidenceStorageContract evidenceStorageContract() {
 
@@ -31,7 +35,7 @@ public class ContractConfig {
         try {
             contractAddress = ContractUtils.getDeployedContractAddress("EvidenceStorageContract", network);
             return EvidenceStorageContract.load(contractAddress,
-                    org.web3j.protocol.Web3j.build(new org.web3j.protocol.http.HttpService()),
+                    web3j,
                     credentials,
                     contractGasProvider);
         } catch (IOException e) {
