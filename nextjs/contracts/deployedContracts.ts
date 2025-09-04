@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     Counter: {
-      address: "0x34B40BA116d5Dec75548a9e9A8f15411461E8c70",
+      address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
       abi: [
         {
           inputs: [
@@ -68,10 +68,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 113,
+      deployedOnBlock: 1,
     },
     EvidenceStorageContract: {
-      address: "0xD0141E899a65C95a556fE2B27e5982A6DE7fDD7A",
+      address: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
       abi: [
         {
           inputs: [
@@ -800,7 +800,7 @@ const deployedContracts = {
         renounceOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
       },
-      deployedOnBlock: 115,
+      deployedOnBlock: 3,
     },
   },
 } as const;

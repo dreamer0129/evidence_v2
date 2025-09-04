@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameter;
 import org.web3j.protocol.core.DefaultBlockParameterName;
@@ -76,7 +75,7 @@ public class EvidenceEventListener {
     private <T> T executeWithRetry(DbOperation<T> operation, String operationName) {
         int attempt = 0;
         Exception lastException = null;
-        
+
         while (attempt < MAX_DB_RETRIES) {
             try {
                 synchronized (dbLock) {
@@ -85,25 +84,29 @@ public class EvidenceEventListener {
             } catch (Exception e) {
                 lastException = e;
                 attempt++;
-                
+
                 if (attempt < MAX_DB_RETRIES) {
-                    log.warn("Attempt {} failed for {}: {}. Retrying in {}ms...", 
-                            attempt, operationName, e.getMessage(), DB_RETRY_DELAY_MS);
+                    log.warn("Attempt {} failed for {}: {}. Retrying in {}ms...", attempt,
+                            operationName, e.getMessage(), DB_RETRY_DELAY_MS);
                     try {
                         Thread.sleep(DB_RETRY_DELAY_MS);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
-                        throw new BlockchainException("Interrupted during retry for " + operationName, ie);
+                        throw new BlockchainException(
+                                "Interrupted during retry for " + operationName, ie);
                     }
                 } else {
-                    log.error("All {} attempts failed for {}: {}", MAX_DB_RETRIES, operationName, e.getMessage());
+                    log.error("All {} attempts failed for {}: {}", MAX_DB_RETRIES, operationName,
+                            e.getMessage());
                 }
             }
         }
-        
-        throw new BlockchainException("Failed to execute " + operationName + " after " + MAX_DB_RETRIES + " attempts", lastException);
+
+        throw new BlockchainException(
+                "Failed to execute " + operationName + " after " + MAX_DB_RETRIES + " attempts",
+                lastException);
     }
-    
+
     @FunctionalInterface
     private interface DbOperation<T> {
         T execute() throws Exception;
@@ -240,8 +243,8 @@ public class EvidenceEventListener {
             BigInteger blockTimestamp = getBlockTimestamp(event.log.getBlockNumber());
 
             executeWithRetry(() -> {
-                BlockchainEvent blockchainEvent = createBlockchainEvent(event, "EvidenceStatusChanged",
-                        blockTimestamp);
+                BlockchainEvent blockchainEvent = createBlockchainEvent(event,
+                        "EvidenceStatusChanged", blockTimestamp);
                 blockchainEventRepository.save(blockchainEvent);
                 return null;
             }, "save EvidenceStatusChanged event");

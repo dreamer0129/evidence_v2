@@ -114,9 +114,6 @@ public class EvidenceStorageContractTest {
                 System.out.println("File: " + evidence.metadata.fileName);
                 System.out.println("Size: " + evidence.metadata.size + " bytes");
                 System.out.println("Hash: " + evidence.hash.algorithm);
-
-                Evidence evidence3 = evidenceStorage.getEvidence("EVID:1756911668:CN-1").send();
-                System.out.println(evidence3.evidenceId);
         }
 
         @Test @DisplayName("Test getTotalEvidenceCount function")

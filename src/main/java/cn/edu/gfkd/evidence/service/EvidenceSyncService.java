@@ -9,8 +9,11 @@ import java.util.Map;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.util.StringUtils;
 import org.web3j.utils.Numeric;
 
@@ -46,6 +49,11 @@ public class EvidenceSyncService {
     }
 
     @EventListener @Async
+    @Retryable(value = {org.springframework.dao.CannotAcquireLockException.class, 
+                      org.hibernate.exception.LockAcquisitionException.class,
+                      org.sqlite.SQLiteException.class},
+               maxAttempts = 5,
+               backoff = @Backoff(delay = 100, multiplier = 2))
     public void handleBlockchainEvent(BlockchainEventReceived event) {
         try {
             logEventProcessing(event, "Processing");
@@ -78,6 +86,12 @@ public class EvidenceSyncService {
         }
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Retryable(value = {org.springframework.dao.CannotAcquireLockException.class, 
+                      org.hibernate.exception.LockAcquisitionException.class,
+                      org.sqlite.SQLiteException.class},
+               maxAttempts = 3,
+               backoff = @Backoff(delay = 50, multiplier = 1.5))
     private void processEvidenceSubmitted(BlockchainEventReceived event) {
         validateEventInput(event);
 
@@ -180,6 +194,12 @@ public class EvidenceSyncService {
         }
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Retryable(value = {org.springframework.dao.CannotAcquireLockException.class, 
+                      org.hibernate.exception.LockAcquisitionException.class,
+                      org.sqlite.SQLiteException.class},
+               maxAttempts = 3,
+               backoff = @Backoff(delay = 50, multiplier = 1.5))
     private void processEvidenceStatusChanged(BlockchainEventReceived event) {
         String evidenceId = (String) event.getParameters().get("evidenceId");
         String newStatus = (String) event.getParameters().get("newStatus");
@@ -209,6 +229,12 @@ public class EvidenceSyncService {
         // No need to store verification status as it's just a verification operation
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Retryable(value = {org.springframework.dao.CannotAcquireLockException.class, 
+                      org.hibernate.exception.LockAcquisitionException.class,
+                      org.sqlite.SQLiteException.class},
+               maxAttempts = 3,
+               backoff = @Backoff(delay = 50, multiplier = 1.5))
     private void processEvidenceRevoked(BlockchainEventReceived event) {
         Object evidenceIdObj = event.getParameters().get("evidenceId");
         Object revokerObj = event.getParameters().get("revoker");
@@ -229,6 +255,12 @@ public class EvidenceSyncService {
         log.info("Revoked evidence for evidenceId: {}", evidenceId);
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Retryable(value = {org.springframework.dao.CannotAcquireLockException.class, 
+                      org.hibernate.exception.LockAcquisitionException.class,
+                      org.sqlite.SQLiteException.class},
+               maxAttempts = 3,
+               backoff = @Backoff(delay = 50, multiplier = 1.5))
     protected void markEventAsProcessed(String transactionHash, BigInteger logIndex) {
         List<BlockchainEvent> events = blockchainEventRepository
                 .findByTransactionHash(transactionHash);
@@ -243,6 +275,12 @@ public class EvidenceSyncService {
         }
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Retryable(value = {org.springframework.dao.CannotAcquireLockException.class, 
+                      org.hibernate.exception.LockAcquisitionException.class,
+                      org.sqlite.SQLiteException.class},
+               maxAttempts = 3,
+               backoff = @Backoff(delay = 50, multiplier = 1.5))
     protected void updateSyncStatus(BigInteger blockNumber) {
         try {
             String contractAddress = blockchainEventListener.getContractAddress();
