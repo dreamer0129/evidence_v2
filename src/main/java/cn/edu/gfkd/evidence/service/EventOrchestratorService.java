@@ -7,24 +7,20 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import cn.edu.gfkd.evidence.service.processor.BlockchainEventProcessor;
-import cn.edu.gfkd.evidence.service.storage.EventStorageService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import cn.edu.gfkd.evidence.entity.BlockchainEvent;
 import cn.edu.gfkd.evidence.exception.BlockchainException;
+import cn.edu.gfkd.evidence.service.processor.BlockchainEventProcessor;
+import cn.edu.gfkd.evidence.service.storage.EventStorageService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * 区块链事件协调器服务
  * 
- * 主要职责：
- * 1. 协调整个区块链事件的处理流程
- * 2. 管理事件处理器的注册和路由
- * 3. 提供事件处理的统一入口
- * 4. 处理系统启动和关闭的生命周期
+ * 主要职责： 1. 协调整个区块链事件的处理流程 2. 管理事件处理器的注册和路由 3. 提供事件处理的统一入口 4. 处理系统启动和关闭的生命周期
  */
 @Service @Slf4j
 public class EventOrchestratorService {
@@ -48,8 +44,7 @@ public class EventOrchestratorService {
 
     private volatile long systemStartTime = 0;
 
-    public EventOrchestratorService(
-            BlockchainEvidenceEventService blockchainEvidenceEventService,
+    public EventOrchestratorService(BlockchainEvidenceEventService blockchainEvidenceEventService,
             EventStorageService eventStorageService,
             List<BlockchainEventProcessor> eventProcessors) {
         this.blockchainEvidenceEventService = blockchainEvidenceEventService;
@@ -82,8 +77,8 @@ public class EventOrchestratorService {
             scheduler.schedule(this::startSystem, startupDelaySec, TimeUnit.SECONDS);
 
             // 启动健康检查
-            scheduler.scheduleAtFixedRate(this::performHealthCheck, 
-                    healthCheckIntervalSec, healthCheckIntervalSec, TimeUnit.SECONDS);
+            scheduler.scheduleAtFixedRate(this::performHealthCheck, healthCheckIntervalSec,
+                    healthCheckIntervalSec, TimeUnit.SECONDS);
 
             log.info("Event orchestrator service initialized successfully");
 
@@ -154,19 +149,20 @@ public class EventOrchestratorService {
      */
     public void restartSystem() {
         log.info("Restarting blockchain event processing system");
-        
+
         try {
             stopSystem();
             // 等待系统完全停止
             Thread.sleep(2000);
             startSystem();
-            
+
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.warn("System restart interrupted");
         } catch (Exception e) {
             log.error("Failed to restart blockchain event processing system", e);
-            throw new BlockchainException("Failed to restart blockchain event processing system", e);
+            throw new BlockchainException("Failed to restart blockchain event processing system",
+                    e);
         }
     }
 
@@ -175,7 +171,8 @@ public class EventOrchestratorService {
      */
     @Transactional
     public void processBlockchainEvent(BlockchainEvent event) {
-        log.debug("Processing blockchain event through orchestrator: id={}, eventType={}, txHash={}", 
+        log.debug(
+                "Processing blockchain event through orchestrator: id={}, eventType={}, txHash={}",
                 event.getId(), event.getEventName(), event.getTransactionHash());
 
         try {
@@ -191,20 +188,20 @@ public class EventOrchestratorService {
 
             // 处理事件
             processor.processEvent(savedEvent);
-            
+
             // 标记事件为已处理
             eventStorageService.markEventAsProcessed(savedEvent.getId());
-            
-            log.debug("Successfully processed event: id={}, eventType={}", 
-                    savedEvent.getId(), savedEvent.getEventName());
+
+            log.debug("Successfully processed event: id={}, eventType={}", savedEvent.getId(),
+                    savedEvent.getEventName());
 
         } catch (Exception e) {
-            log.error("Failed to process blockchain event: id={}, eventType={}, txHash={}", 
+            log.error("Failed to process blockchain event: id={}, eventType={}, txHash={}",
                     event.getId(), event.getEventName(), event.getTransactionHash(), e);
-            
+
             // 增加事件处理失败次数
             eventStorageService.incrementEventProcessingFailures(event.getId());
-            
+
             throw new BlockchainException("Failed to process blockchain event", e);
         }
     }
@@ -222,9 +219,8 @@ public class EventOrchestratorService {
             log.debug("Processing unprocessed events through orchestrator");
 
             // 获取未处理的事件
-            var unprocessedEvents = eventStorageService.findUnprocessedEvents(
-                org.springframework.data.domain.PageRequest.of(0, 100)
-            );
+            var unprocessedEvents = eventStorageService
+                    .findUnprocessedEvents(org.springframework.data.domain.PageRequest.of(0, 100));
 
             if (unprocessedEvents.isEmpty()) {
                 log.debug("No unprocessed events found");
@@ -238,7 +234,7 @@ public class EventOrchestratorService {
                 try {
                     processBlockchainEvent(event);
                 } catch (Exception e) {
-                    log.error("Failed to process unprocessed event: id={}, txHash={}, eventType={}", 
+                    log.error("Failed to process unprocessed event: id={}, txHash={}, eventType={}",
                             event.getId(), event.getTransactionHash(), event.getEventName(), e);
                     // 继续处理下一个事件
                 }
@@ -263,19 +259,21 @@ public class EventOrchestratorService {
             StringBuilder status = new StringBuilder();
             status.append("RUNNING\n");
             status.append("System uptime: ").append(getSystemUptime()).append("ms\n");
-            status.append("Event service: ").append(blockchainEvidenceEventService.isListening() ? "RUNNING" : "STOPPED").append("\n");
+            status.append("Event service: ")
+                    .append(blockchainEvidenceEventService.isListening() ? "RUNNING" : "STOPPED")
+                    .append("\n");
             try {
                 BigInteger currentBlock = blockchainEvidenceEventService.getCurrentBlockNumber();
-                BigInteger lastSyncedBlock = blockchainEvidenceEventService.getLastSyncedBlockNumber();
+                BigInteger lastSyncedBlock = blockchainEvidenceEventService
+                        .getLastSyncedBlockNumber();
                 BigInteger blocksBehind = currentBlock.subtract(lastSyncedBlock);
                 status.append("Blockchain sync: Last block ").append(lastSyncedBlock)
-                      .append(", Current block ").append(currentBlock)
-                      .append(", Behind ").append(blocksBehind).append(" blocks\n");
+                        .append(", Current block ").append(currentBlock).append(", Behind ")
+                        .append(blocksBehind).append(" blocks\n");
             } catch (Exception e) {
                 status.append("Blockchain sync: Status unavailable\n");
             }
             status.append("Active processors: ").append(eventProcessors.size()).append("\n");
-
 
             return status.toString();
 
@@ -321,7 +319,7 @@ public class EventOrchestratorService {
      */
     private void registerEventProcessors() {
         log.info("Registering {} event processors", eventProcessors.size());
-        
+
         for (BlockchainEventProcessor processor : eventProcessors) {
             blockchainEvidenceEventService.setEventProcessor(processor);
             log.info("Registered processor for event type: {}", processor.getSupportedEventType());
@@ -333,14 +331,16 @@ public class EventOrchestratorService {
      */
     private void initializeEventProcessors() {
         log.info("Initializing event processors");
-        
+
         for (BlockchainEventProcessor processor : eventProcessors) {
             try {
                 processor.initialize();
                 log.info("Initialized processor: {}", processor.getSupportedEventType());
             } catch (Exception e) {
-                log.error("Failed to initialize processor: {}", processor.getSupportedEventType(), e);
-                throw new BlockchainException("Failed to initialize processor: " + processor.getSupportedEventType(), e);
+                log.error("Failed to initialize processor: {}", processor.getSupportedEventType(),
+                        e);
+                throw new BlockchainException(
+                        "Failed to initialize processor: " + processor.getSupportedEventType(), e);
             }
         }
     }
@@ -350,7 +350,7 @@ public class EventOrchestratorService {
      */
     private void destroyEventProcessors() {
         log.info("Destroying event processors");
-        
+
         for (BlockchainEventProcessor processor : eventProcessors) {
             try {
                 processor.destroy();
@@ -409,7 +409,8 @@ public class EventOrchestratorService {
             // 检查区块链同步状态
             try {
                 BigInteger currentBlock = blockchainEvidenceEventService.getCurrentBlockNumber();
-                BigInteger lastSyncedBlock = blockchainEvidenceEventService.getLastSyncedBlockNumber();
+                BigInteger lastSyncedBlock = blockchainEvidenceEventService
+                        .getLastSyncedBlockNumber();
                 BigInteger blocksBehind = currentBlock.subtract(lastSyncedBlock);
                 if (blocksBehind.compareTo(BigInteger.valueOf(100)) > 0) {
                     log.warn("Blockchain sync is too far behind: {} blocks", blocksBehind);
@@ -423,7 +424,8 @@ public class EventOrchestratorService {
             // 检查事件处理器
             for (BlockchainEventProcessor processor : eventProcessors) {
                 if (!processor.isHealthy()) {
-                    log.warn("Event processor {} is not healthy", processor.getSupportedEventType());
+                    log.warn("Event processor {} is not healthy",
+                            processor.getSupportedEventType());
                     allHealthy = false;
                 }
             }
@@ -445,5 +447,4 @@ public class EventOrchestratorService {
     private long getSystemUptime() {
         return systemStartTime > 0 ? System.currentTimeMillis() - systemStartTime : 0;
     }
-
 }

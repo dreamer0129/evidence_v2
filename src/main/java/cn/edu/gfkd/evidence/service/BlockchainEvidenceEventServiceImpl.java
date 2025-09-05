@@ -518,6 +518,8 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
 
         log.debug("Processing transaction receipt for: {}", transactionHash);
 
+        boolean hasEvents = false;
+
         // 处理 EvidenceSubmitted 事件
         try {
             List<EvidenceStorageContract.EvidenceSubmittedEventResponse> submittedEvents = EvidenceStorageContract
@@ -525,6 +527,7 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
 
             if (!submittedEvents.isEmpty()) {
                 log.debug("Found {} EvidenceSubmitted events in receipt", submittedEvents.size());
+                hasEvents = true;
                 for (EvidenceStorageContract.EvidenceSubmittedEventResponse event : submittedEvents) {
                     processEvidenceSubmitted(event, blockNumber, transactionHash, blockTimestamp);
                 }
@@ -541,6 +544,7 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
             if (!statusChangedEvents.isEmpty()) {
                 log.debug("Found {} EvidenceStatusChanged events in receipt",
                         statusChangedEvents.size());
+                hasEvents = true;
                 for (EvidenceStorageContract.EvidenceStatusChangedEventResponse event : statusChangedEvents) {
                     processEvidenceStatusChanged(event, blockNumber, transactionHash,
                             blockTimestamp);
@@ -557,12 +561,23 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
 
             if (!revokedEvents.isEmpty()) {
                 log.debug("Found {} EvidenceRevoked events in receipt", revokedEvents.size());
+                hasEvents = true;
                 for (EvidenceStorageContract.EvidenceRevokedEventResponse event : revokedEvents) {
                     processEvidenceRevoked(event, blockNumber, transactionHash, blockTimestamp);
                 }
             }
         } catch (Exception e) {
             log.debug("No EvidenceRevoked events found in receipt: {}", e.getMessage());
+        }
+
+        // 如果处理了事件，更新同步状态到当前区块
+        if (hasEvents) {
+            try {
+                updateSyncStatus(blockNumber);
+                log.debug("Updated sync status to block {} after processing real-time events", blockNumber);
+            } catch (Exception e) {
+                log.error("Failed to update sync status after processing real-time events from block {}", blockNumber, e);
+            }
         }
     }
 
