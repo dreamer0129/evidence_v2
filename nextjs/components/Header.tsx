@@ -89,19 +89,16 @@ export const Header = () => {
       </AdaptiveBackground>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-12">
           {/* Logo and Brand */}
           <div className="flex items-center flex-shrink-0">
-            <Link href="/" className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
-                <HomeIcon className="w-5 h-5 text-white" />
+            <Link href="/" className="flex items-center space-x-2">
+              <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                <HomeIcon className="w-4 h-4 text-white" />
               </div>
               <div>
-                <AdaptiveText variant="primary" className="font-bold text-lg">
+                <AdaptiveText variant="primary" className="font-bold text-sm">
                   EvidenceChain
-                </AdaptiveText>
-                <AdaptiveText variant="muted" className="text-xs block">
-                  区块链存证系统
                 </AdaptiveText>
               </div>
             </Link>
@@ -125,10 +122,10 @@ export const Header = () => {
             {/* Mobile menu button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg transition-colors"
+              className="md:hidden p-1 rounded-lg transition-colors"
             >
               <AdaptiveText variant="secondary">
-                {isMobileMenuOpen ? <XMarkIcon className="w-5 h-5" /> : <Bars3Icon className="w-5 h-5" />}
+                {isMobileMenuOpen ? <XMarkIcon className="w-4 h-4" /> : <Bars3Icon className="w-4 h-4" />}
               </AdaptiveText>
             </button>
           </div>
