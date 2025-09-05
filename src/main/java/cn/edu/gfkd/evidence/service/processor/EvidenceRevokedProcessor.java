@@ -1,8 +1,10 @@
-package cn.edu.gfkd.evidence.service;
+package cn.edu.gfkd.evidence.service.processor;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 
+import cn.edu.gfkd.evidence.exception.EventProcessingException;
+import cn.edu.gfkd.evidence.service.storage.EventStorageService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,11 +34,6 @@ public class EvidenceRevokedProcessor implements BlockchainEventProcessor {
     private final EventStorageService eventStorageService;
     private final ObjectMapper objectMapper;
 
-    // 处理器统计信息
-    private volatile long processedCount = 0;
-    private volatile long successCount = 0;
-    private volatile long failureCount = 0;
-
     @Override
     @Transactional
     public void processEvent(BlockchainEvent event) throws EventProcessingException {
@@ -44,8 +41,6 @@ public class EvidenceRevokedProcessor implements BlockchainEventProcessor {
                 event.getId(), event.getTransactionHash());
 
         try {
-            processedCount++;
-
             // 解析事件数据
             EvidenceRevokedEventData eventData = parseEventData(event);
             log.debug("Parsed EvidenceRevoked event data: evidenceId={}, revoker={}", 
@@ -69,23 +64,19 @@ public class EvidenceRevokedProcessor implements BlockchainEventProcessor {
 
             // 保存更新
             EvidenceEntity updatedEvidence = evidenceRepository.save(evidence);
-            successCount++;
 
             log.info("Successfully revoked evidence for evidenceId: {} by revoker: {}, previous status: {}", 
                     eventData.evidenceId, eventData.revoker, previousStatus);
 
         } catch (EvidenceNotFoundException e) {
-            failureCount++;
             // 证据不存在，这种情况不应该重试
             String errorMsg = "Evidence not found for revocation: " + e.getMessage();
             log.warn(errorMsg);
             throw new EventProcessingException(errorMsg, 
                     event.getEventName(), event.getId().toString(), false);
         } catch (EventProcessingException e) {
-            failureCount++;
             throw e;
         } catch (Exception e) {
-            failureCount++;
             String errorMsg = "Failed to process EvidenceRevoked event: " + e.getMessage();
             log.error(errorMsg, e);
             throw new EventProcessingException(errorMsg, 
@@ -113,14 +104,6 @@ public class EvidenceRevokedProcessor implements BlockchainEventProcessor {
         return "EvidenceRevoked事件处理器 - 负责处理证据撤销事件，将证据状态设置为已撤销并记录撤销信息";
     }
 
-    @Override
-    public String getStatistics() {
-        return String.format(
-            "{\"processed\":%d,\"success\":%d,\"failure\":%d,\"successRate\":%.2f}",
-            processedCount, successCount, failureCount,
-            processedCount > 0 ? (double) successCount / processedCount * 100 : 0.0
-        );
-    }
 
     /**
      * 解析事件数据

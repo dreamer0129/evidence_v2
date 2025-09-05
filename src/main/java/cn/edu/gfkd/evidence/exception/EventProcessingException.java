@@ -1,6 +1,4 @@
-package cn.edu.gfkd.evidence.service;
-
-import cn.edu.gfkd.evidence.exception.BlockchainException;
+package cn.edu.gfkd.evidence.exception;
 
 /**
  * 事件处理异常类

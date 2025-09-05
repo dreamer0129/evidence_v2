@@ -4,7 +4,7 @@ import cn.edu.gfkd.evidence.dto.JwtResponse;
 import cn.edu.gfkd.evidence.dto.UserLoginDto;
 import cn.edu.gfkd.evidence.dto.UserRegistrationDto;
 import cn.edu.gfkd.evidence.entity.User;
-import cn.edu.gfkd.evidence.service.UserService;
+import cn.edu.gfkd.evidence.service.user.UserService;
 import cn.edu.gfkd.evidence.utils.JwtUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

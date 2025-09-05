@@ -16,7 +16,7 @@ import org.springframework.test.context.ActiveProfiles;
 import cn.edu.gfkd.evidence.dto.UserRegistrationDto;
 import cn.edu.gfkd.evidence.entity.User;
 import cn.edu.gfkd.evidence.repository.UserRepository;
-import cn.edu.gfkd.evidence.service.UserService;
+import cn.edu.gfkd.evidence.service.user.UserService;
 
 @SpringBootTest @ActiveProfiles("test") @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class UserServiceIntegrationTest {

@@ -1,4 +1,6 @@
-package cn.edu.gfkd.evidence.service;
+package cn.edu.gfkd.evidence.service.retry;
+
+import cn.edu.gfkd.evidence.exception.BlockchainException;
 
 /**
  * 重试处理器接口 - 定义统一的重试机制

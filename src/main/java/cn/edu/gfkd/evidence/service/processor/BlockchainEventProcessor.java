@@ -1,6 +1,7 @@
-package cn.edu.gfkd.evidence.service;
+package cn.edu.gfkd.evidence.service.processor;
 
 import cn.edu.gfkd.evidence.entity.BlockchainEvent;
+import cn.edu.gfkd.evidence.exception.EventProcessingException;
 
 /**
  * 区块链事件处理器接口
@@ -75,12 +76,4 @@ public interface BlockchainEventProcessor {
         return true;
     }
 
-    /**
-     * 获取处理器统计信息
-     * 
-     * @return 统计信息JSON字符串
-     */
-    default String getStatistics() {
-        return "{}";
-    }
-}
+  }

@@ -4,6 +4,7 @@ import cn.edu.gfkd.evidence.dto.UserRegistrationDto;
 import cn.edu.gfkd.evidence.entity.User;
 import cn.edu.gfkd.evidence.exception.UserNotFoundException;
 import cn.edu.gfkd.evidence.repository.UserRepository;
+import cn.edu.gfkd.evidence.service.user.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

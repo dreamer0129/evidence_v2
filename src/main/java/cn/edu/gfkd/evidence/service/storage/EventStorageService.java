@@ -1,10 +1,11 @@
-package cn.edu.gfkd.evidence.service;
+package cn.edu.gfkd.evidence.service.storage;
 
 import java.math.BigInteger;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
-import org.springframework.data.domain.Page;
+import cn.edu.gfkd.evidence.exception.BlockchainException;
 import org.springframework.data.domain.Pageable;
 
 import cn.edu.gfkd.evidence.entity.BlockchainEvent;
@@ -52,29 +53,29 @@ public interface EventStorageService {
      * 
      * @param transactionHash 交易哈希
      * @param eventType 事件类型
-     * @return 匹配的事件列表
+     * @return 匹配的事件（可选）
      * @throws BlockchainException 查询失败时抛出
      */
-    List<BlockchainEvent> findByTransactionHashAndEventType(String transactionHash, String eventType);
+    Optional<BlockchainEvent> findByTransactionHashAndEventType(String transactionHash, String eventType);
 
     /**
      * 查找未处理的事件（分页）
      * 
      * @param pageable 分页参数
-     * @return 未处理的事件页面
+     * @return 未处理的事件列表
      * @throws BlockchainException 查询失败时抛出
      */
-    Page<BlockchainEvent> findUnprocessedEvents(Pageable pageable);
+    List<BlockchainEvent> findUnprocessedEvents(Pageable pageable);
 
     /**
      * 查找指定事件类型的未处理事件
      * 
      * @param eventType 事件类型
      * @param pageable 分页参数
-     * @return 指定类型的未处理事件页面
+     * @return 指定类型的未处理事件列表
      * @throws BlockchainException 查询失败时抛出
      */
-    Page<BlockchainEvent> findUnprocessedEventsByEventType(String eventType, Pageable pageable);
+    List<BlockchainEvent> findUnprocessedEventsByEventType(String eventType, Pageable pageable);
 
     /**
      * 标记事件为已处理状态
@@ -106,10 +107,9 @@ public interface EventStorageService {
      * 删除指定时间之前的事件（清理用途）
      * 
      * @param beforeTime 删除时间点
-     * @return 删除的事件数量
      * @throws BlockchainException 删除失败时抛出
      */
-    int deleteEventsBefore(LocalDateTime beforeTime);
+    void deleteEventsBefore(LocalDateTime beforeTime);
 
     /**
      * 统计未处理事件的数量

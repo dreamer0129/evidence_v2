@@ -1,4 +1,4 @@
-package cn.edu.gfkd.evidence.service;
+package cn.edu.gfkd.evidence.service.user;
 
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

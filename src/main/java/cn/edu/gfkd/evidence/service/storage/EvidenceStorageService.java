@@ -1,4 +1,4 @@
-package cn.edu.gfkd.evidence.service;
+package cn.edu.gfkd.evidence.service.storage;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,7 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Service @RequiredArgsConstructor @Slf4j
-public class EvidenceService {
+public class EvidenceStorageService {
 
     private final EvidenceRepository evidenceRepository;
 

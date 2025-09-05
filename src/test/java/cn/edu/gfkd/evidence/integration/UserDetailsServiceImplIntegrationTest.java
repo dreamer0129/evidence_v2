@@ -15,7 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import cn.edu.gfkd.evidence.entity.User;
 import cn.edu.gfkd.evidence.repository.UserRepository;
-import cn.edu.gfkd.evidence.service.UserDetailsServiceImpl;
+import cn.edu.gfkd.evidence.service.user.UserDetailsServiceImpl;
 
 @SpringBootTest @ActiveProfiles("test") @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class UserDetailsServiceImplIntegrationTest {

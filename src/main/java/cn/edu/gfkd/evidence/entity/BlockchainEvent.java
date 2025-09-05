@@ -36,6 +36,9 @@ public class BlockchainEvent {
     @Column(name = "is_processed", nullable = false)
     private Boolean isProcessed = false;
 
+    @Column(name = "processing_failures", nullable = false)
+    private Integer processingFailures = 0;
+
     @Column(name = "raw_data", columnDefinition = "TEXT")
     private String rawData;
 
@@ -122,6 +125,14 @@ public class BlockchainEvent {
 
     public void setIsProcessed(Boolean isProcessed) {
         this.isProcessed = isProcessed;
+    }
+
+    public Integer getProcessingFailures() {
+        return processingFailures;
+    }
+
+    public void setProcessingFailures(Integer processingFailures) {
+        this.processingFailures = processingFailures;
     }
 
     public String getRawData() {

@@ -1,6 +1,6 @@
 package cn.edu.gfkd.evidence.config;
 
-import cn.edu.gfkd.evidence.service.UserDetailsServiceImpl;
+import cn.edu.gfkd.evidence.service.user.UserDetailsServiceImpl;
 import cn.edu.gfkd.evidence.utils.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

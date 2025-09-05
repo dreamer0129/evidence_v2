@@ -2,6 +2,7 @@ package cn.edu.gfkd.evidence.service;
 
 import cn.edu.gfkd.evidence.entity.User;
 import cn.edu.gfkd.evidence.repository.UserRepository;
+import cn.edu.gfkd.evidence.service.user.UserDetailsServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -10,7 +11,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 

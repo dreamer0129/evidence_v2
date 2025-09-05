@@ -1,6 +1,6 @@
 package cn.edu.gfkd.evidence.config;
 
-import cn.edu.gfkd.evidence.service.UserDetailsServiceImpl;
+import cn.edu.gfkd.evidence.service.user.UserDetailsServiceImpl;
 import cn.edu.gfkd.evidence.utils.JwtUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

@@ -18,13 +18,13 @@ import org.springframework.test.context.ActiveProfiles;
 
 import cn.edu.gfkd.evidence.entity.EvidenceEntity;
 import cn.edu.gfkd.evidence.repository.EvidenceRepository;
-import cn.edu.gfkd.evidence.service.EvidenceService;
+import cn.edu.gfkd.evidence.service.storage.EvidenceStorageService;
 
 @SpringBootTest @ActiveProfiles("test") @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-class EvidenceServiceIntegrationTest {
+class EvidenceStorageServiceIntegrationTest {
 
     @Autowired
-    private EvidenceService evidenceService;
+    private EvidenceStorageService evidenceStorageService;
 
     @Autowired
     private EvidenceRepository evidenceRepository;
@@ -60,7 +60,7 @@ class EvidenceServiceIntegrationTest {
                 "Test evidence memo");
 
         // When
-        EvidenceEntity savedEvidence = evidenceService.createEvidence(evidence);
+        EvidenceEntity savedEvidence = evidenceStorageService.createEvidence(evidence);
 
         // Then
         assertThat(savedEvidence).isNotNull();
@@ -81,7 +81,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void createEvidence_NullEvidence_ThrowsException() {
         // When & Then
-        assertThatThrownBy(() -> evidenceService.createEvidence(null))
+        assertThatThrownBy(() -> evidenceStorageService.createEvidence(null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Evidence cannot be null");
     }
@@ -97,7 +97,7 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(1234567890), "Test evidence memo");
 
         // When & Then
-        assertThatThrownBy(() -> evidenceService.createEvidence(evidence))
+        assertThatThrownBy(() -> evidenceStorageService.createEvidence(evidence))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Evidence ID cannot be empty");
     }
@@ -112,7 +112,7 @@ class EvidenceServiceIntegrationTest {
                 BigInteger.valueOf(1234567890), "Test evidence memo");
 
         // When & Then
-        assertThatThrownBy(() -> evidenceService.createEvidence(evidence))
+        assertThatThrownBy(() -> evidenceStorageService.createEvidence(evidence))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("User address cannot be empty");
     }
@@ -127,7 +127,7 @@ class EvidenceServiceIntegrationTest {
                 "Test evidence memo");
 
         // When & Then
-        assertThatThrownBy(() -> evidenceService.createEvidence(evidence))
+        assertThatThrownBy(() -> evidenceStorageService.createEvidence(evidence))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Hash value cannot be empty");
     }
@@ -146,7 +146,7 @@ class EvidenceServiceIntegrationTest {
         EvidenceEntity savedEvidence = evidenceRepository.save(evidence);
 
         // When
-        var foundEvidence = evidenceService.getEvidenceById(savedEvidence.getId());
+        var foundEvidence = evidenceStorageService.getEvidenceById(savedEvidence.getId());
 
         // Then
         assertThat(foundEvidence).isPresent();
@@ -156,7 +156,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void getEvidenceById_NonExistingEvidence_ReturnsEmpty() {
         // When
-        var foundEvidence = evidenceService.getEvidenceById(999L);
+        var foundEvidence = evidenceStorageService.getEvidenceById(999L);
 
         // Then
         assertThat(foundEvidence).isEmpty();
@@ -175,7 +175,7 @@ class EvidenceServiceIntegrationTest {
         evidenceRepository.save(evidence);
 
         // When
-        var foundEvidence = evidenceService.getEvidenceByEvidenceId(evidenceId);
+        var foundEvidence = evidenceStorageService.getEvidenceByEvidenceId(evidenceId);
 
         // Then
         assertThat(foundEvidence).isPresent();
@@ -186,7 +186,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void getEvidenceByEvidenceId_NonExistingEvidence_ReturnsEmpty() {
         // When
-        var foundEvidence = evidenceService.getEvidenceByEvidenceId("NONEXISTENT");
+        var foundEvidence = evidenceStorageService.getEvidenceByEvidenceId("NONEXISTENT");
 
         // Then
         assertThat(foundEvidence).isEmpty();
@@ -213,7 +213,7 @@ class EvidenceServiceIntegrationTest {
         evidenceRepository.save(evidence2);
 
         // When
-        List<EvidenceEntity> evidenceList = evidenceService.getEvidenceByUserAddress(userAddress);
+        List<EvidenceEntity> evidenceList = evidenceStorageService.getEvidenceByUserAddress(userAddress);
 
         // Then
         assertThat(evidenceList).hasSize(2);
@@ -223,7 +223,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void getEvidenceByUserAddress_NonExistingUser_ReturnsEmptyList() {
         // When
-        List<EvidenceEntity> evidenceList = evidenceService
+        List<EvidenceEntity> evidenceList = evidenceStorageService
                 .getEvidenceByUserAddress("0xNonExistingAddress");
 
         // Then
@@ -245,7 +245,7 @@ class EvidenceServiceIntegrationTest {
         evidenceRepository.save(evidence1);
 
         // When
-        Page<EvidenceEntity> evidencePage = evidenceService.getEvidenceByUserAddress(userAddress,
+        Page<EvidenceEntity> evidencePage = evidenceStorageService.getEvidenceByUserAddress(userAddress,
                 pageable);
 
         // Then
@@ -267,7 +267,7 @@ class EvidenceServiceIntegrationTest {
         evidenceRepository.save(evidence);
 
         // When
-        boolean exists = evidenceService.existsByEvidenceId(evidenceId);
+        boolean exists = evidenceStorageService.existsByEvidenceId(evidenceId);
 
         // Then
         assertThat(exists).isTrue();
@@ -276,7 +276,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void existsByEvidenceId_NonExistingEvidence_ReturnsFalse() {
         // When
-        boolean exists = evidenceService.existsByEvidenceId("NONEXISTENT");
+        boolean exists = evidenceStorageService.existsByEvidenceId("NONEXISTENT");
 
         // Then
         assertThat(exists).isFalse();
@@ -303,7 +303,7 @@ class EvidenceServiceIntegrationTest {
         evidenceRepository.save(evidence2);
 
         // When
-        long count = evidenceService.countByUserAddress(userAddress);
+        long count = evidenceStorageService.countByUserAddress(userAddress);
 
         // Then
         assertThat(count).isEqualTo(2);
@@ -312,7 +312,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void countByUserAddress_NonExistingUser_ReturnsZero() {
         // When
-        long count = evidenceService.countByUserAddress("0xNonExistingAddress");
+        long count = evidenceStorageService.countByUserAddress("0xNonExistingAddress");
 
         // Then
         assertThat(count).isZero();
@@ -331,7 +331,7 @@ class EvidenceServiceIntegrationTest {
         savedEvidence.setStatus("verified");
 
         // When
-        EvidenceEntity updatedEvidence = evidenceService.updateEvidence(savedEvidence);
+        EvidenceEntity updatedEvidence = evidenceStorageService.updateEvidence(savedEvidence);
 
         // Then
         assertThat(updatedEvidence.getStatus()).isEqualTo("verified");
@@ -355,7 +355,7 @@ class EvidenceServiceIntegrationTest {
         EvidenceEntity savedEvidence = evidenceRepository.save(evidence);
 
         // When
-        evidenceService.deleteEvidence(savedEvidence.getId());
+        evidenceStorageService.deleteEvidence(savedEvidence.getId());
 
         // Then
         assertThat(evidenceRepository.findById(savedEvidence.getId())).isEmpty();
@@ -364,7 +364,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void deleteEvidence_NonExistingEvidence_ThrowsException() {
         // When & Then
-        assertThatThrownBy(() -> evidenceService.deleteEvidence(999L))
+        assertThatThrownBy(() -> evidenceStorageService.deleteEvidence(999L))
                 .isInstanceOf(RuntimeException.class).hasMessageContaining("Evidence not found");
     }
 
@@ -381,7 +381,7 @@ class EvidenceServiceIntegrationTest {
         evidenceRepository.save(evidence);
 
         // When
-        evidenceService.deleteEvidenceByEvidenceId(evidenceId);
+        evidenceStorageService.deleteEvidenceByEvidenceId(evidenceId);
 
         // Then
         assertThat(evidenceRepository.findByEvidenceId(generateUniqueEvidenceId())).isEmpty();
@@ -390,7 +390,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void deleteEvidenceByEvidenceId_NonExistingEvidence_ThrowsException() {
         // When & Then
-        assertThatThrownBy(() -> evidenceService.deleteEvidenceByEvidenceId("NONEXISTENT"))
+        assertThatThrownBy(() -> evidenceStorageService.deleteEvidenceByEvidenceId("NONEXISTENT"))
                 .isInstanceOf(RuntimeException.class).hasMessageContaining("Evidence not found");
     }
 
@@ -414,7 +414,7 @@ class EvidenceServiceIntegrationTest {
         evidenceRepository.save(evidence2);
 
         // When
-        long count = evidenceService.count();
+        long count = evidenceStorageService.count();
 
         // Then
         assertThat(count).isEqualTo(2);
@@ -423,7 +423,7 @@ class EvidenceServiceIntegrationTest {
     @Test
     void count_EmptyDatabase_ReturnsZero() {
         // When
-        long count = evidenceService.count();
+        long count = evidenceStorageService.count();
 
         // Then
         assertThat(count).isZero();

@@ -1,8 +1,10 @@
-package cn.edu.gfkd.evidence.service;
+package cn.edu.gfkd.evidence.service.processor;
 
 import java.io.IOException;
 import java.math.BigInteger;
 
+import cn.edu.gfkd.evidence.exception.EventProcessingException;
+import cn.edu.gfkd.evidence.service.storage.EventStorageService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,7 +13,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import cn.edu.gfkd.evidence.entity.BlockchainEvent;
 import cn.edu.gfkd.evidence.entity.EvidenceEntity;
-import cn.edu.gfkd.evidence.exception.EvidenceNotFoundException;
 import cn.edu.gfkd.evidence.repository.EvidenceRepository;
 import cn.edu.gfkd.evidence.generated.EvidenceStorageContract;
 import lombok.RequiredArgsConstructor;
@@ -34,11 +35,6 @@ public class EvidenceSubmittedProcessor implements BlockchainEventProcessor {
     private final EvidenceStorageContract evidenceStorageContract;
     private final ObjectMapper objectMapper;
 
-    // 处理器统计信息
-    private volatile long processedCount = 0;
-    private volatile long successCount = 0;
-    private volatile long failureCount = 0;
-
     @Override
     @Transactional
     public void processEvent(BlockchainEvent event) throws EventProcessingException {
@@ -46,8 +42,6 @@ public class EvidenceSubmittedProcessor implements BlockchainEventProcessor {
                 event.getId(), event.getTransactionHash());
 
         try {
-            processedCount++;
-
             // 解析事件数据
             EvidenceSubmittedEventData eventData = parseEventData(event);
             log.debug("Parsed EvidenceSubmitted event data: evidenceId={}", eventData.evidenceId);
@@ -74,16 +68,13 @@ public class EvidenceSubmittedProcessor implements BlockchainEventProcessor {
 
             // 保存证据记录
             EvidenceEntity savedEvidence = evidenceRepository.save(evidence);
-            successCount++;
 
             log.info("Successfully created new evidence record for evidenceId: {} with id: {} from contract", 
                     eventData.evidenceId, savedEvidence.getId());
 
         } catch (EventProcessingException e) {
-            failureCount++;
             throw e;
         } catch (Exception e) {
-            failureCount++;
             String errorMsg = "Failed to process EvidenceSubmitted event: " + e.getMessage();
             log.error(errorMsg, e);
             throw new EventProcessingException(errorMsg, 
@@ -111,15 +102,7 @@ public class EvidenceSubmittedProcessor implements BlockchainEventProcessor {
         return "EvidenceSubmitted事件处理器 - 负责处理新证据提交事件，从智能合约获取完整证据数据并创建证据记录";
     }
 
-    @Override
-    public String getStatistics() {
-        return String.format(
-            "{\"processed\":%d,\"success\":%d,\"failure\":%d,\"successRate\":%.2f}",
-            processedCount, successCount, failureCount,
-            processedCount > 0 ? (double) successCount / processedCount * 100 : 0.0
-        );
-    }
-
+    
     /**
      * 解析事件数据
      */

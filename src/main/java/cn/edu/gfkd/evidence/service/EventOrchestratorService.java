@@ -2,20 +2,19 @@ package cn.edu.gfkd.evidence.service;
 
 import java.math.BigInteger;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import cn.edu.gfkd.evidence.service.processor.BlockchainEventProcessor;
+import cn.edu.gfkd.evidence.service.storage.EventStorageService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import cn.edu.gfkd.evidence.entity.BlockchainEvent;
-import cn.edu.gfkd.evidence.repository.EvidenceRepository;
 import cn.edu.gfkd.evidence.exception.BlockchainException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -25,17 +24,14 @@ import lombok.extern.slf4j.Slf4j;
  * 1. 协调整个区块链事件的处理流程
  * 2. 管理事件处理器的注册和路由
  * 3. 提供事件处理的统一入口
- * 4. 监控和统计事件处理情况
- * 5. 处理系统启动和关闭的生命周期
+ * 4. 处理系统启动和关闭的生命周期
  */
-@Service @RequiredArgsConstructor @Slf4j
+@Service @Slf4j
 public class EventOrchestratorService {
 
-    private final ContractListenerService contractListenerService;
+    private final BlockchainEvidenceEventService blockchainEvidenceEventService;
     private final EventStorageService eventStorageService;
-    private final BlockchainSyncService blockchainSyncService;
     private final List<BlockchainEventProcessor> eventProcessors;
-
     // 系统状态控制
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
     private ScheduledExecutorService scheduler;
@@ -43,17 +39,24 @@ public class EventOrchestratorService {
     // 协调器配置
     @Value("${orchestrator.health-check-interval-sec:30}")
     private int healthCheckIntervalSec;
-    
+
     @Value("${orchestrator.startup-delay-sec:5}")
     private int startupDelaySec;
-    
+
     @Value("${orchestrator.max-retry-attempts:3}")
     private int maxRetryAttempts;
 
-    // 统计信息
-    private volatile long totalEventsProcessed = 0;
-    private volatile long totalEventsFailed = 0;
     private volatile long systemStartTime = 0;
+
+    public EventOrchestratorService(
+            BlockchainEvidenceEventService blockchainEvidenceEventService,
+            EventStorageService eventStorageService,
+            List<BlockchainEventProcessor> eventProcessors) {
+        this.blockchainEvidenceEventService = blockchainEvidenceEventService;
+        this.eventStorageService = eventStorageService;
+        this.eventProcessors = eventProcessors;
+        init();
+    }
 
     /**
      * 初始化事件协调器
@@ -106,19 +109,9 @@ public class EventOrchestratorService {
             isRunning.set(true);
 
             // 启动合约监听服务
-            contractListenerService.init();
+            blockchainEvidenceEventService.startEventListening();
 
-            // 检查并同步历史事件
-            if (blockchainSyncService.needsHistoricalSync()) {
-                log.info("Historical sync needed, starting sync process");
-                BigInteger currentBlock = blockchainSyncService.getCurrentBlockNumber();
-                BigInteger lastSyncedBlock = blockchainSyncService.getLastSyncedBlockNumber();
-                
-                contractListenerService.getHistoricalEvents(
-                    lastSyncedBlock.add(BigInteger.ONE), 
-                    currentBlock
-                );
-            }
+            // 历史事件同步现在在 blockchainEventService.startEventListening() 中自动处理
 
             log.info("Blockchain event processing system started successfully");
 
@@ -144,7 +137,7 @@ public class EventOrchestratorService {
             isRunning.set(false);
 
             // 停止合约监听服务
-            contractListenerService.stopEventListening();
+            blockchainEvidenceEventService.stopEventListening();
 
             // 销毁事件处理器
             destroyEventProcessors();
@@ -203,13 +196,10 @@ public class EventOrchestratorService {
             // 标记事件为已处理
             eventStorageService.markEventAsProcessed(savedEvent.getId());
             
-            totalEventsProcessed++;
-            
             log.debug("Successfully processed event: id={}, eventType={}", 
                     savedEvent.getId(), savedEvent.getEventName());
 
         } catch (Exception e) {
-            totalEventsFailed++;
             log.error("Failed to process blockchain event: id={}, eventType={}, txHash={}", 
                     event.getId(), event.getEventName(), event.getTransactionHash(), e);
             
@@ -242,7 +232,7 @@ public class EventOrchestratorService {
                 return;
             }
 
-            log.info("Found {} unprocessed events to process", unprocessedEvents.getSize());
+            log.info("Found {} unprocessed events to process", unprocessedEvents.size());
 
             // 处理每个未处理的事件
             for (BlockchainEvent event : unprocessedEvents) {
@@ -274,19 +264,19 @@ public class EventOrchestratorService {
             StringBuilder status = new StringBuilder();
             status.append("RUNNING\n");
             status.append("System uptime: ").append(getSystemUptime()).append("ms\n");
-            status.append("Total events processed: ").append(totalEventsProcessed).append("\n");
-            status.append("Total events failed: ").append(totalEventsFailed).append("\n");
-            status.append("Success rate: ").append(getSuccessRate()).append("%\n");
-            status.append("Contract listener: ").append(contractListenerService.getListenerStatus()).append("\n");
-            status.append("Blockchain sync: ").append(blockchainSyncService.getSyncStatus()).append("\n");
+            status.append("Event service: ").append(blockchainEvidenceEventService.isListening() ? "RUNNING" : "STOPPED").append("\n");
+            try {
+                BigInteger currentBlock = blockchainEvidenceEventService.getCurrentBlockNumber();
+                BigInteger lastSyncedBlock = blockchainEvidenceEventService.getLastSyncedBlockNumber();
+                BigInteger blocksBehind = currentBlock.subtract(lastSyncedBlock);
+                status.append("Blockchain sync: Last block ").append(lastSyncedBlock)
+                      .append(", Current block ").append(currentBlock)
+                      .append(", Behind ").append(blocksBehind).append(" blocks\n");
+            } catch (Exception e) {
+                status.append("Blockchain sync: Status unavailable\n");
+            }
             status.append("Active processors: ").append(eventProcessors.size()).append("\n");
 
-            // 添加各个处理器的统计信息
-            status.append("Processor statistics:\n");
-            for (BlockchainEventProcessor processor : eventProcessors) {
-                status.append("  - ").append(processor.getSupportedEventType())
-                      .append(": ").append(processor.getStatistics()).append("\n");
-            }
 
             return status.toString();
 
@@ -334,7 +324,7 @@ public class EventOrchestratorService {
         log.info("Registering {} event processors", eventProcessors.size());
         
         for (BlockchainEventProcessor processor : eventProcessors) {
-            contractListenerService.setEventProcessor(processor);
+            blockchainEvidenceEventService.setEventProcessor(processor);
             log.info("Registered processor for event type: {}", processor.getSupportedEventType());
         }
     }
@@ -411,15 +401,23 @@ public class EventOrchestratorService {
             // 检查各个组件的健康状态
             boolean allHealthy = true;
 
-            // 检查合约监听服务
-            if (!contractListenerService.isListening()) {
-                log.warn("Contract listener service is not running");
+            // 检查区块链事件服务
+            if (!blockchainEvidenceEventService.isListening()) {
+                log.warn("Blockchain evidence event service is not running");
                 allHealthy = false;
             }
 
-            // 检查区块链同步服务
-            if (!blockchainSyncService.validateSyncConsistency()) {
-                log.warn("Blockchain sync service consistency check failed");
+            // 检查区块链同步状态
+            try {
+                BigInteger currentBlock = blockchainEvidenceEventService.getCurrentBlockNumber();
+                BigInteger lastSyncedBlock = blockchainEvidenceEventService.getLastSyncedBlockNumber();
+                BigInteger blocksBehind = currentBlock.subtract(lastSyncedBlock);
+                if (blocksBehind.compareTo(BigInteger.valueOf(100)) > 0) {
+                    log.warn("Blockchain sync is too far behind: {} blocks", blocksBehind);
+                    allHealthy = false;
+                }
+            } catch (Exception e) {
+                log.warn("Failed to check blockchain sync status", e);
                 allHealthy = false;
             }
 
@@ -449,11 +447,4 @@ public class EventOrchestratorService {
         return systemStartTime > 0 ? System.currentTimeMillis() - systemStartTime : 0;
     }
 
-    /**
-     * 获取成功率
-     */
-    private double getSuccessRate() {
-        long total = totalEventsProcessed + totalEventsFailed;
-        return total > 0 ? (double) totalEventsProcessed / total * 100 : 0.0;
-    }
 }

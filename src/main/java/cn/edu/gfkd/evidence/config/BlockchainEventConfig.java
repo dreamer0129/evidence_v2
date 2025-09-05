@@ -3,9 +3,7 @@ package cn.edu.gfkd.evidence.config;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
-import cn.edu.gfkd.evidence.service.ContractListenerService;
 import cn.edu.gfkd.evidence.service.EventOrchestratorService;
-import cn.edu.gfkd.evidence.service.RetryHandler;
 
 /**
  * 区块链事件处理配置类
@@ -17,9 +15,7 @@ import cn.edu.gfkd.evidence.service.RetryHandler;
  */
 @Configuration
 @Import({
-    RetryHandler.class,
-    EventOrchestratorService.class,
-    ContractListenerService.class
+    EventOrchestratorService.class
 })
 public class BlockchainEventConfig {
 

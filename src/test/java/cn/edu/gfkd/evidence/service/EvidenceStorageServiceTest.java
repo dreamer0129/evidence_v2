@@ -3,6 +3,7 @@ package cn.edu.gfkd.evidence.service;
 import cn.edu.gfkd.evidence.entity.EvidenceEntity;
 import cn.edu.gfkd.evidence.exception.EvidenceNotFoundException;
 import cn.edu.gfkd.evidence.repository.EvidenceRepository;
+import cn.edu.gfkd.evidence.service.storage.EvidenceStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,13 +28,13 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("EvidenceService Unit Tests")
-class EvidenceServiceTest {
+class EvidenceStorageServiceTest {
 
     @Mock
     private EvidenceRepository evidenceRepository;
 
     @InjectMocks
-    private EvidenceService evidenceService;
+    private EvidenceStorageService evidenceStorageService;
 
     private EvidenceEntity evidence1;
     private EvidenceEntity evidence2;
@@ -78,7 +79,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.save(any(EvidenceEntity.class))).thenReturn(evidence1);
 
         // Act
-        EvidenceEntity result = evidenceService.createEvidence(evidence1);
+        EvidenceEntity result = evidenceStorageService.createEvidence(evidence1);
 
         // Assert
         assertNotNull(result);
@@ -97,7 +98,7 @@ class EvidenceServiceTest {
         // Act & Assert
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> evidenceService.createEvidence(null));
+                () -> evidenceStorageService.createEvidence(null));
 
         assertEquals("Evidence cannot be null", exception.getMessage());
 
@@ -114,7 +115,7 @@ class EvidenceServiceTest {
         // Act & Assert
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> evidenceService.createEvidence(evidence1));
+                () -> evidenceStorageService.createEvidence(evidence1));
 
         assertEquals("Evidence ID cannot be empty", exception.getMessage());
 
@@ -131,7 +132,7 @@ class EvidenceServiceTest {
         // Act & Assert
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> evidenceService.createEvidence(evidence1));
+                () -> evidenceStorageService.createEvidence(evidence1));
 
         assertEquals("User address cannot be empty", exception.getMessage());
 
@@ -148,7 +149,7 @@ class EvidenceServiceTest {
         // Act & Assert
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> evidenceService.createEvidence(evidence1));
+                () -> evidenceStorageService.createEvidence(evidence1));
 
         assertEquals("Hash value cannot be empty", exception.getMessage());
 
@@ -163,7 +164,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.findById(1L)).thenReturn(Optional.of(evidence1));
 
         // Act
-        Optional<EvidenceEntity> result = evidenceService.getEvidenceById(1L);
+        Optional<EvidenceEntity> result = evidenceStorageService.getEvidenceById(1L);
 
         // Assert
         assertTrue(result.isPresent());
@@ -181,7 +182,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.findById(999L)).thenReturn(Optional.empty());
 
         // Act
-        Optional<EvidenceEntity> result = evidenceService.getEvidenceById(999L);
+        Optional<EvidenceEntity> result = evidenceStorageService.getEvidenceById(999L);
 
         // Assert
         assertFalse(result.isPresent());
@@ -197,7 +198,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.findByEvidenceId("EVID:1234567890:CN-001")).thenReturn(Optional.of(evidence1));
 
         // Act
-        Optional<EvidenceEntity> result = evidenceService.getEvidenceByEvidenceId("EVID:1234567890:CN-001");
+        Optional<EvidenceEntity> result = evidenceStorageService.getEvidenceByEvidenceId("EVID:1234567890:CN-001");
 
         // Assert
         assertTrue(result.isPresent());
@@ -215,7 +216,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.findByTransactionHash(txHash)).thenReturn(Optional.of(evidence1));
 
         // Act
-        Optional<EvidenceEntity> result = evidenceService.getEvidenceByTransactionHash(txHash);
+        Optional<EvidenceEntity> result = evidenceStorageService.getEvidenceByTransactionHash(txHash);
 
         // Assert
         assertTrue(result.isPresent());
@@ -234,7 +235,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.findByUserAddress(userAddress)).thenReturn(evidenceList);
 
         // Act
-        List<EvidenceEntity> result = evidenceService.getEvidenceByUserAddress(userAddress);
+        List<EvidenceEntity> result = evidenceStorageService.getEvidenceByUserAddress(userAddress);
 
         // Assert
         assertNotNull(result);
@@ -254,7 +255,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.findByUserAddress(userAddress)).thenReturn(Collections.emptyList());
 
         // Act
-        List<EvidenceEntity> result = evidenceService.getEvidenceByUserAddress(userAddress);
+        List<EvidenceEntity> result = evidenceStorageService.getEvidenceByUserAddress(userAddress);
 
         // Assert
         assertNotNull(result);
@@ -273,7 +274,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.findByHashValue(hashValue)).thenReturn(evidenceList);
 
         // Act
-        List<EvidenceEntity> result = evidenceService.getEvidenceByHashValue(hashValue);
+        List<EvidenceEntity> result = evidenceStorageService.getEvidenceByHashValue(hashValue);
 
         // Assert
         assertNotNull(result);
@@ -293,7 +294,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.findByStatus(status)).thenReturn(evidenceList);
 
         // Act
-        List<EvidenceEntity> result = evidenceService.getEvidenceByStatus(status);
+        List<EvidenceEntity> result = evidenceStorageService.getEvidenceByStatus(status);
 
         // Assert
         assertNotNull(result);
@@ -315,7 +316,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.findByUserAddress(userAddress, pageable)).thenReturn(evidencePage);
 
         // Act
-        Page<EvidenceEntity> result = evidenceService.getEvidenceByUserAddress(userAddress, pageable);
+        Page<EvidenceEntity> result = evidenceStorageService.getEvidenceByUserAddress(userAddress, pageable);
 
         // Assert
         assertNotNull(result);
@@ -336,7 +337,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.findByStatus(status, pageable)).thenReturn(evidencePage);
 
         // Act
-        Page<EvidenceEntity> result = evidenceService.getEvidenceByStatus(status, pageable);
+        Page<EvidenceEntity> result = evidenceStorageService.getEvidenceByStatus(status, pageable);
 
         // Assert
         assertNotNull(result);
@@ -359,7 +360,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.findByFilters(evidenceId, userAddress, status, pageable)).thenReturn(evidencePage);
 
         // Act
-        Page<EvidenceEntity> result = evidenceService.searchEvidence(evidenceId, userAddress, status, pageable);
+        Page<EvidenceEntity> result = evidenceStorageService.searchEvidence(evidenceId, userAddress, status, pageable);
 
         // Assert
         assertNotNull(result);
@@ -378,7 +379,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.existsByEvidenceId(evidenceId)).thenReturn(true);
 
         // Act
-        boolean result = evidenceService.existsByEvidenceId(evidenceId);
+        boolean result = evidenceStorageService.existsByEvidenceId(evidenceId);
 
         // Assert
         assertTrue(result);
@@ -395,7 +396,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.existsByEvidenceId(evidenceId)).thenReturn(false);
 
         // Act
-        boolean result = evidenceService.existsByEvidenceId(evidenceId);
+        boolean result = evidenceStorageService.existsByEvidenceId(evidenceId);
 
         // Assert
         assertFalse(result);
@@ -412,7 +413,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.existsByTransactionHash(txHash)).thenReturn(true);
 
         // Act
-        boolean result = evidenceService.existsByTransactionHash(txHash);
+        boolean result = evidenceStorageService.existsByTransactionHash(txHash);
 
         // Assert
         assertTrue(result);
@@ -429,7 +430,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.countByUserAddress(userAddress)).thenReturn(5L);
 
         // Act
-        long result = evidenceService.countByUserAddress(userAddress);
+        long result = evidenceStorageService.countByUserAddress(userAddress);
 
         // Assert
         assertEquals(5L, result);
@@ -446,7 +447,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.countByStatus(status)).thenReturn(10L);
 
         // Act
-        long result = evidenceService.countByStatus(status);
+        long result = evidenceStorageService.countByStatus(status);
 
         // Assert
         assertEquals(10L, result);
@@ -464,7 +465,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.countByUserAddressAndStatus(userAddress, status)).thenReturn(3L);
 
         // Act
-        long result = evidenceService.countByUserAddressAndStatus(userAddress, status);
+        long result = evidenceStorageService.countByUserAddressAndStatus(userAddress, status);
 
         // Assert
         assertEquals(3L, result);
@@ -481,7 +482,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.save(any(EvidenceEntity.class))).thenReturn(evidence1);
 
         // Act
-        EvidenceEntity result = evidenceService.updateEvidence(evidence1);
+        EvidenceEntity result = evidenceStorageService.updateEvidence(evidence1);
 
         // Assert
         assertNotNull(result);
@@ -497,7 +498,7 @@ class EvidenceServiceTest {
         // Act & Assert
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> evidenceService.updateEvidence(null));
+                () -> evidenceStorageService.updateEvidence(null));
 
         assertEquals("Evidence cannot be null", exception.getMessage());
 
@@ -513,7 +514,7 @@ class EvidenceServiceTest {
         doNothing().when(evidenceRepository).deleteById(1L);
 
         // Act
-        evidenceService.deleteEvidence(1L);
+        evidenceStorageService.deleteEvidence(1L);
 
         // Assert
         verify(evidenceRepository).existsById(1L);
@@ -529,7 +530,7 @@ class EvidenceServiceTest {
         // Act & Assert
         EvidenceNotFoundException exception = assertThrows(
                 EvidenceNotFoundException.class,
-                () -> evidenceService.deleteEvidence(999L));
+                () -> evidenceStorageService.deleteEvidence(999L));
 
         assertEquals("Evidence not found with ID: 999", exception.getMessage());
 
@@ -547,7 +548,7 @@ class EvidenceServiceTest {
         doNothing().when(evidenceRepository).delete(any(EvidenceEntity.class));
 
         // Act
-        evidenceService.deleteEvidenceByEvidenceId(evidenceId);
+        evidenceStorageService.deleteEvidenceByEvidenceId(evidenceId);
 
         // Assert
         verify(evidenceRepository).findByEvidenceId(evidenceId);
@@ -564,7 +565,7 @@ class EvidenceServiceTest {
         // Act & Assert
         EvidenceNotFoundException exception = assertThrows(
                 EvidenceNotFoundException.class,
-                () -> evidenceService.deleteEvidenceByEvidenceId(evidenceId));
+                () -> evidenceStorageService.deleteEvidenceByEvidenceId(evidenceId));
 
         assertEquals("Evidence not found: NONEXISTENT", exception.getMessage());
 
@@ -580,7 +581,7 @@ class EvidenceServiceTest {
         when(evidenceRepository.count()).thenReturn(25L);
 
         // Act
-        long result = evidenceService.count();
+        long result = evidenceStorageService.count();
 
         // Assert
         assertEquals(25L, result);
@@ -598,7 +599,7 @@ class EvidenceServiceTest {
         // Act & Assert
         RuntimeException exception = assertThrows(
                 RuntimeException.class,
-                () -> evidenceService.createEvidence(evidence1));
+                () -> evidenceStorageService.createEvidence(evidence1));
 
         assertEquals("Database error", exception.getMessage());
 
@@ -615,7 +616,7 @@ class EvidenceServiceTest {
         // Act & Assert
         RuntimeException exception = assertThrows(
                 RuntimeException.class,
-                () -> evidenceService.getEvidenceById(1L));
+                () -> evidenceStorageService.getEvidenceById(1L));
 
         assertEquals("Database error", exception.getMessage());
 

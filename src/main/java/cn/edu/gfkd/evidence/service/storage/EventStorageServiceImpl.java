@@ -1,10 +1,12 @@
-package cn.edu.gfkd.evidence.service;
+package cn.edu.gfkd.evidence.service.storage;
 
 import java.math.BigInteger;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
-import org.springframework.data.domain.Page;
+import cn.edu.gfkd.evidence.service.retry.RetryHandler;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 import cn.edu.gfkd.evidence.entity.BlockchainEvent;
 import cn.edu.gfkd.evidence.exception.BlockchainException;
 import cn.edu.gfkd.evidence.repository.BlockchainEventRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -24,11 +25,18 @@ import lombok.extern.slf4j.Slf4j;
  * 3. 支持事务性操作和重试机制
  * 4. 提供事件查询和统计功能
  */
-@Service @RequiredArgsConstructor @Slf4j
+@Service @Slf4j
 public class EventStorageServiceImpl implements EventStorageService {
 
     private final BlockchainEventRepository blockchainEventRepository;
     private final RetryHandler retryHandler;
+
+    public EventStorageServiceImpl(
+            BlockchainEventRepository blockchainEventRepository,
+            @Qualifier("retryHandlerImpl") RetryHandler retryHandler) {
+        this.blockchainEventRepository = blockchainEventRepository;
+        this.retryHandler = retryHandler;
+    }
 
     // 同步锁对象，用于保护数据库操作
     private final Object dbLock = new Object();
@@ -104,7 +112,7 @@ public class EventStorageServiceImpl implements EventStorageService {
     }
 
     @Override
-    public List<BlockchainEvent> findByTransactionHashAndEventType(String transactionHash, String eventType) {
+    public Optional<BlockchainEvent> findByTransactionHashAndEventType(String transactionHash, String eventType) {
         log.debug("Finding events by transaction hash: {} and event type: {}", transactionHash, eventType);
         
         return retryHandler.executeWithRetry(
@@ -114,7 +122,7 @@ public class EventStorageServiceImpl implements EventStorageService {
     }
 
     @Override
-    public Page<BlockchainEvent> findUnprocessedEvents(Pageable pageable) {
+    public List<BlockchainEvent> findUnprocessedEvents(Pageable pageable) {
         log.debug("Finding unprocessed events with pagination: {}", pageable);
         
         return retryHandler.executeWithRetry(
@@ -124,7 +132,7 @@ public class EventStorageServiceImpl implements EventStorageService {
     }
 
     @Override
-    public Page<BlockchainEvent> findUnprocessedEventsByEventType(String eventType, Pageable pageable) {
+    public List<BlockchainEvent> findUnprocessedEventsByEventType(String eventType, Pageable pageable) {
         log.debug("Finding unprocessed events by type: {} with pagination: {}", eventType, pageable);
         
         return retryHandler.executeWithRetry(
@@ -198,14 +206,14 @@ public class EventStorageServiceImpl implements EventStorageService {
 
     @Override
     @Transactional
-    public int deleteEventsBefore(LocalDateTime beforeTime) {
+    public void deleteEventsBefore(LocalDateTime beforeTime) {
         log.debug("Deleting events before: {}", beforeTime);
         
-        return retryHandler.executeWithRetryTransactional(
+        retryHandler.executeWithRetryTransactional(
             () -> {
-                int deletedCount = blockchainEventRepository.deleteByCreatedAtBefore(beforeTime);
-                log.info("Deleted {} events before {}", deletedCount, beforeTime);
-                return deletedCount;
+                blockchainEventRepository.deleteByCreatedAtBefore(beforeTime);
+                log.info("Deleted events before {}", beforeTime);
+                return null;
             },
             "delete events before time"
         );

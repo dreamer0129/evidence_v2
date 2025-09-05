@@ -8,7 +8,9 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigInteger;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface BlockchainEventRepository extends JpaRepository<BlockchainEvent, Long> {
@@ -45,4 +47,21 @@ public interface BlockchainEventRepository extends JpaRepository<BlockchainEvent
     void deleteByBlockNumberLessThan(BigInteger blockNumber);
     
     List<BlockchainEvent> findByTransactionHash(String transactionHash);
+    
+    // Additional methods needed by EventStorageServiceImpl
+    boolean existsByContractAddressAndBlockNumberAndTransactionHashAndEventName(String contractAddress, BigInteger blockNumber, String transactionHash, String eventName);
+    
+    Optional<BlockchainEvent> findByContractAddressAndBlockNumberAndTransactionHashAndEventName(String contractAddress, BigInteger blockNumber, String transactionHash, String eventName);
+    
+    Optional<BlockchainEvent> findByTransactionHashAndEventName(String transactionHash, String eventName);
+    
+    List<BlockchainEvent> findByIsProcessedFalse(Pageable pageable);
+    
+    List<BlockchainEvent> findByEventNameAndIsProcessedFalse(String eventName, Pageable pageable);
+    
+    void deleteByCreatedAtBefore(LocalDateTime createdAt);
+    
+    long countByEventNameAndIsProcessedFalse(String eventName);
+    
+    long countByIsProcessedFalse();
 }

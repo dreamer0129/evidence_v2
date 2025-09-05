@@ -3,7 +3,7 @@ package cn.edu.gfkd.evidence.controller;
 import cn.edu.gfkd.evidence.dto.ApiResponse;
 import cn.edu.gfkd.evidence.dto.EvidenceDTO;
 import cn.edu.gfkd.evidence.entity.EvidenceEntity;
-import cn.edu.gfkd.evidence.service.EvidenceService;
+import cn.edu.gfkd.evidence.service.storage.EvidenceStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -22,12 +22,12 @@ import java.util.stream.Collectors;
 public class EvidenceController {
 
     @Autowired
-    private EvidenceService evidenceService;
+    private EvidenceStorageService evidenceStorageService;
 
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<EvidenceDTO>> getEvidenceById(@PathVariable Long id) {
-        EvidenceEntity evidence = evidenceService.getEvidenceById(id)
+        EvidenceEntity evidence = evidenceStorageService.getEvidenceById(id)
                 .orElseThrow(() -> new RuntimeException("Evidence not found with id: " + id));
 
         EvidenceDTO evidenceDTO = convertToDTO(evidence);
@@ -38,7 +38,7 @@ public class EvidenceController {
     @GetMapping("/evidenceId/{evidenceId}")
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<EvidenceDTO>> getEvidenceByEvidenceId(@PathVariable String evidenceId) {
-        EvidenceEntity evidence = evidenceService.getEvidenceByEvidenceId(evidenceId)
+        EvidenceEntity evidence = evidenceStorageService.getEvidenceByEvidenceId(evidenceId)
                 .orElseThrow(() -> new RuntimeException("Evidence not found with evidenceId: " + evidenceId));
 
         EvidenceDTO evidenceDTO = convertToDTO(evidence);
@@ -49,7 +49,7 @@ public class EvidenceController {
     @GetMapping("/transaction/{transactionHash}")
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<EvidenceDTO>> getEvidenceByTransactionHash(@PathVariable String transactionHash) {
-        EvidenceEntity evidence = evidenceService.getEvidenceByTransactionHash(transactionHash)
+        EvidenceEntity evidence = evidenceStorageService.getEvidenceByTransactionHash(transactionHash)
                 .orElseThrow(
                         () -> new RuntimeException("Evidence not found with transaction hash: " + transactionHash));
 
@@ -67,7 +67,7 @@ public class EvidenceController {
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
 
         Pageable pageable = createPageable(page, size, sort);
-        Page<EvidenceEntity> evidencePage = evidenceService.getEvidenceByUserAddress(userAddress, pageable);
+        Page<EvidenceEntity> evidencePage = evidenceStorageService.getEvidenceByUserAddress(userAddress, pageable);
         Page<EvidenceDTO> dtoPage = evidencePage.map(this::convertToDTO);
 
         return ResponseEntity.ok(ApiResponse.success(dtoPage));
@@ -76,7 +76,7 @@ public class EvidenceController {
     @GetMapping("/hash/{hashValue}")
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<EvidenceDTO>>> getEvidenceByHashValue(@PathVariable String hashValue) {
-        List<EvidenceEntity> evidenceList = evidenceService.getEvidenceByHashValue(hashValue);
+        List<EvidenceEntity> evidenceList = evidenceStorageService.getEvidenceByHashValue(hashValue);
         List<EvidenceDTO> dtoList = evidenceList.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -93,7 +93,7 @@ public class EvidenceController {
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
 
         Pageable pageable = createPageable(page, size, sort);
-        Page<EvidenceEntity> evidencePage = evidenceService.getEvidenceByStatus(status, pageable);
+        Page<EvidenceEntity> evidencePage = evidenceStorageService.getEvidenceByStatus(status, pageable);
         Page<EvidenceDTO> dtoPage = evidencePage.map(this::convertToDTO);
 
         return ResponseEntity.ok(ApiResponse.success(dtoPage));
@@ -110,7 +110,7 @@ public class EvidenceController {
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
 
         Pageable pageable = createPageable(page, size, sort);
-        Page<EvidenceEntity> evidencePage = evidenceService.searchEvidence(evidenceId, userAddress, status, pageable);
+        Page<EvidenceEntity> evidencePage = evidenceStorageService.searchEvidence(evidenceId, userAddress, status, pageable);
         Page<EvidenceDTO> dtoPage = evidencePage.map(this::convertToDTO);
 
         return ResponseEntity.ok(ApiResponse.success(dtoPage));
@@ -119,8 +119,8 @@ public class EvidenceController {
     @GetMapping("/stats/user/{userAddress}")
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<EvidenceStatsDTO>> getEvidenceStatsByUser(@PathVariable String userAddress) {
-        long totalCount = evidenceService.countByUserAddress(userAddress);
-        long effectiveCount = evidenceService.countByUserAddressAndStatus(userAddress, "effective");
+        long totalCount = evidenceStorageService.countByUserAddress(userAddress);
+        long effectiveCount = evidenceStorageService.countByUserAddressAndStatus(userAddress, "effective");
 
         EvidenceStatsDTO stats = new EvidenceStatsDTO(totalCount, effectiveCount);
 
@@ -130,9 +130,9 @@ public class EvidenceController {
     @GetMapping("/stats/overview")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<OverviewStatsDTO>> getOverviewStats() {
-        long totalCount = evidenceService.count();
-        long effectiveCount = evidenceService.countByStatus("effective");
-        long revokedCount = evidenceService.countByStatus("revoked");
+        long totalCount = evidenceStorageService.count();
+        long effectiveCount = evidenceStorageService.countByStatus("effective");
+        long revokedCount = evidenceStorageService.countByStatus("revoked");
 
         OverviewStatsDTO stats = new OverviewStatsDTO(totalCount, effectiveCount, revokedCount);
 

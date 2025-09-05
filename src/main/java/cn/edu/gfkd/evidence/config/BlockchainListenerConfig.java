@@ -1,6 +1,6 @@
 package cn.edu.gfkd.evidence.config;
 
-import cn.edu.gfkd.evidence.service.EvidenceEventListener;
+import cn.edu.gfkd.evidence.service.EventOrchestratorService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,13 +11,13 @@ import org.springframework.context.annotation.Configuration;
 @Slf4j
 public class BlockchainListenerConfig {
 
-    private final EvidenceEventListener blockchainEventListener;
+    private final EventOrchestratorService eventOrchestratorService;
 
     @PostConstruct
     public void initBlockchainListener() {
         try {
             log.info("Initializing blockchain event listener...");
-            blockchainEventListener.init();
+            eventOrchestratorService.init();
             log.info("Blockchain event listener initialized successfully");
         } catch (Exception e) {
             log.error("Failed to initialize blockchain event listener", e);
