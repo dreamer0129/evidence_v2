@@ -3,19 +3,12 @@ package cn.edu.gfkd.evidence.service;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import cn.edu.gfkd.evidence.service.processor.BlockchainEventProcessor;
-import cn.edu.gfkd.evidence.service.retry.RetryHandler;
-import cn.edu.gfkd.evidence.service.storage.EventStorageService;
-import cn.edu.gfkd.evidence.service.web3.Web3jService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import org.web3j.protocol.core.DefaultBlockParameter;
 import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.methods.request.EthFilter;
@@ -24,22 +17,25 @@ import org.web3j.protocol.core.methods.response.EthLog;
 import org.web3j.protocol.core.methods.response.Log;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import cn.edu.gfkd.evidence.entity.BlockchainEvent;
 import cn.edu.gfkd.evidence.entity.SyncStatus;
+import cn.edu.gfkd.evidence.enums.EvidenceEventType;
 import cn.edu.gfkd.evidence.exception.BlockchainException;
 import cn.edu.gfkd.evidence.generated.EvidenceStorageContract;
 import cn.edu.gfkd.evidence.repository.SyncStatusRepository;
+import cn.edu.gfkd.evidence.service.processor.BlockchainEventProcessor;
+import cn.edu.gfkd.evidence.service.retry.RetryHandler;
+import cn.edu.gfkd.evidence.service.storage.EventStorageService;
+import cn.edu.gfkd.evidence.service.web3.Web3jService;
 import io.reactivex.disposables.Disposable;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * 区块链事件统一服务实现
  * 
- * 主要职责：
- * 1. 统一管理区块链事件的实时监听和历史同步
- * 2. 提供同步状态管理功能
- * 3. 处理事件处理器的注册和管理
+ * 主要职责： 1. 统一管理区块链事件的实时监听和历史同步 2. 提供同步状态管理功能 3. 处理事件处理器的注册和管理
  */
 @Service @Slf4j
 public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEventService {
@@ -76,13 +72,10 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
     @Value("${blockchain.sync.retry-delay-ms:1000}")
     private long retryDelayMs;
 
-    public BlockchainEvidenceEventServiceImpl(
-            Web3jService web3jService,
-            EventStorageService eventStorageService,
-            RetryHandler retryHandler,
+    public BlockchainEvidenceEventServiceImpl(Web3jService web3jService,
+            EventStorageService eventStorageService, RetryHandler retryHandler,
             EvidenceStorageContract evidenceStorageContract,
-            SyncStatusRepository syncStatusRepository,
-            ObjectMapper objectMapper) {
+            SyncStatusRepository syncStatusRepository, ObjectMapper objectMapper) {
         this.web3jService = web3jService;
         this.eventStorageService = eventStorageService;
         this.retryHandler = retryHandler;
@@ -90,7 +83,6 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
         this.syncStatusRepository = syncStatusRepository;
         this.objectMapper = objectMapper;
     }
-
 
     @Override
     public void startEventListening() {
@@ -108,7 +100,8 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
             if (needsHistoricalSync()) {
                 BigInteger currentBlock = getCurrentBlockNumber();
                 BigInteger lastSyncedBlock = getLastSyncedBlockNumber();
-                log.info("Syncing missing events from block {} to {}", lastSyncedBlock.add(BigInteger.ONE), currentBlock);
+                log.info("Syncing missing events from block {} to {}",
+                        lastSyncedBlock.add(BigInteger.ONE), currentBlock);
                 syncHistoricalEvents(lastSyncedBlock.add(BigInteger.ONE), currentBlock);
             }
 
@@ -154,12 +147,14 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
 
     @Override
     public void syncHistoricalEvents(BigInteger startBlock, BigInteger endBlock) {
-        log.info("Starting historical events sync from block {} to {} (batch size: {}, delay: {}ms)",
+        log.info(
+                "Starting historical events sync from block {} to {} (batch size: {}, delay: {}ms)",
                 startBlock, endBlock, batchSize, delayBetweenBatchesMs);
 
         // 验证区块范围
         if (startBlock.compareTo(endBlock) > 0) {
-            log.warn("Start block {} is greater than end block {}, nothing to sync", startBlock, endBlock);
+            log.warn("Start block {} is greater than end block {}, nothing to sync", startBlock,
+                    endBlock);
             return;
         }
 
@@ -173,10 +168,12 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
             // 最终更新同步状态到结束区块
             updateSyncStatus(endBlock);
 
-            log.info("Successfully completed historical events sync from block {} to {}", startBlock, endBlock);
+            log.info("Successfully completed historical events sync from block {} to {}",
+                    startBlock, endBlock);
 
         } catch (Exception e) {
-            log.error("Failed to sync historical events from block {} to {}", startBlock, endBlock, e);
+            log.error("Failed to sync historical events from block {} to {}", startBlock, endBlock,
+                    e);
             throw new BlockchainException("Failed to sync historical events", e);
         }
     }
@@ -191,7 +188,8 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
         BigInteger current = startBlock;
         BigInteger batchSizeBig = BigInteger.valueOf(batchSize);
         int batchNumber = 1;
-        int totalBatches = (int) Math.ceil((double) endBlock.subtract(startBlock).add(BigInteger.ONE).intValue() / batchSize);
+        int totalBatches = (int) Math.ceil(
+                (double) endBlock.subtract(startBlock).add(BigInteger.ONE).intValue() / batchSize);
 
         while (current.compareTo(endBlock) <= 0) {
             BigInteger batchEnd = current.add(batchSizeBig).subtract(BigInteger.ONE);
@@ -200,7 +198,8 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
             }
 
             try {
-                log.info("Processing batch {}/{}: blocks {} to {}", batchNumber, totalBatches, current, batchEnd);
+                log.info("Processing batch {}/{}: blocks {} to {}", batchNumber, totalBatches,
+                        current, batchEnd);
 
                 // 处理当前批次
                 processBatch(current, batchEnd);
@@ -208,7 +207,8 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
                 // 更新进度到当前批次的结束区块
                 updateSyncStatus(batchEnd);
 
-                log.info("Completed batch {}/{}: blocks {} to {}", batchNumber, totalBatches, current, batchEnd);
+                log.info("Completed batch {}/{}: blocks {} to {}", batchNumber, totalBatches,
+                        current, batchEnd);
 
                 // 准备下一批次
                 current = batchEnd.add(BigInteger.ONE);
@@ -226,7 +226,8 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
                 }
 
             } catch (Exception e) {
-                log.error("Failed to process batch {}/{}: blocks {} to {}", batchNumber, totalBatches, current, batchEnd, e);
+                log.error("Failed to process batch {}/{}: blocks {} to {}", batchNumber,
+                        totalBatches, current, batchEnd, e);
                 // 继续下一批次，不要因为一个批次失败而停止整个同步过程
                 current = batchEnd.add(BigInteger.ONE);
                 batchNumber++;
@@ -256,30 +257,31 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
                             Thread.sleep(retryDelayMs);
                         } catch (InterruptedException ie) {
                             Thread.currentThread().interrupt();
-                            log.warn("Retry delay interrupted for batch {} to {}", startBlock, endBlock);
+                            log.warn("Retry delay interrupted for batch {} to {}", startBlock,
+                                    endBlock);
                             return;
                         }
                     }
                 }
 
                 // 创建过滤器
-                EthFilter filter = new EthFilter(
-                        DefaultBlockParameter.valueOf(startBlock),
+                EthFilter filter = new EthFilter(DefaultBlockParameter.valueOf(startBlock),
                         DefaultBlockParameter.valueOf(endBlock),
-                        evidenceStorageContract.getContractAddress()
-                );
+                        evidenceStorageContract.getContractAddress());
 
                 // 获取事件日志
                 EthLog ethLogs = web3jService.getWeb3j().ethGetLogs(filter).send();
                 @SuppressWarnings("unchecked")
-                List<EthLog.LogResult<Log>> logResults = (List<EthLog.LogResult<Log>>) (List<?>) ethLogs.getLogs();
+                List<EthLog.LogResult<Log>> logResults = (List<EthLog.LogResult<Log>>) (List<?>) ethLogs
+                        .getLogs();
 
                 if (logResults.isEmpty()) {
                     log.debug("No events found in blocks {} to {}", startBlock, endBlock);
                     return;
                 }
 
-                log.info("Found {} events in blocks {} to {}", logResults.size(), startBlock, endBlock);
+                log.info("Found {} events in blocks {} to {}", logResults.size(), startBlock,
+                        endBlock);
 
                 // 处理每个事件
                 int processedCount = 0;
@@ -290,8 +292,8 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
                         processLogResult(logResult.get());
                         processedCount++;
                     } catch (Exception e) {
-                        log.error("Error processing log result in blocks {} to {}: {}",
-                                startBlock, endBlock, e.getMessage());
+                        log.error("Error processing log result in blocks {} to {}: {}", startBlock,
+                                endBlock, e.getMessage());
                         failedCount++;
                         // 继续处理下一个事件，不要因为单个事件失败而停止整个批次
                     }
@@ -299,10 +301,12 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
 
                 // 成功完成批次处理
                 if (failedCount > 0) {
-                    log.warn("Batch processing completed for blocks {} to {}: {} processed, {} failed",
+                    log.warn(
+                            "Batch processing completed for blocks {} to {}: {} processed, {} failed",
                             startBlock, endBlock, processedCount, failedCount);
                 } else {
-                    log.info("Batch processing completed for blocks {} to {}: {} events processed successfully",
+                    log.info(
+                            "Batch processing completed for blocks {} to {}: {} events processed successfully",
                             startBlock, endBlock, processedCount);
                 }
 
@@ -313,80 +317,74 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
                 attempt++;
 
                 if (attempt <= maxRetryAttempts) {
-                    log.warn("Attempt {} failed for batch {} to {}: {}",
-                            attempt, startBlock, endBlock, e.getMessage());
+                    log.warn("Attempt {} failed for batch {} to {}: {}", attempt, startBlock,
+                            endBlock, e.getMessage());
                 }
             }
         }
 
         // 所有重试都失败了
-        log.error("Failed to process batch {} to {} after {} attempts. Last error: {}",
-                startBlock, endBlock, maxRetryAttempts, lastException != null ? lastException.getMessage() : "unknown");
+        log.error("Failed to process batch {} to {} after {} attempts. Last error: {}", startBlock,
+                endBlock, maxRetryAttempts,
+                lastException != null ? lastException.getMessage() : "unknown");
 
         if (lastException != null) {
-            throw new BlockchainException("Failed to process batch after " + maxRetryAttempts + " attempts", lastException);
+            throw new BlockchainException(
+                    "Failed to process batch after " + maxRetryAttempts + " attempts",
+                    lastException);
         } else {
-            throw new BlockchainException("Failed to process batch after " + maxRetryAttempts + " attempts");
+            throw new BlockchainException(
+                    "Failed to process batch after " + maxRetryAttempts + " attempts");
         }
     }
 
-    @Override
-    @Transactional
+    @Override @Transactional
     public void updateSyncStatus(BigInteger blockNumber) {
         log.debug("Updating sync status to block {}", blockNumber);
 
-        retryHandler.executeWithRetryTransactional(
-            () -> {
-                SyncStatus syncStatus = getOrCreateSyncStatus();
-                syncStatus.setLastBlockNumber(blockNumber);
-                syncStatus.setLastSyncTimestamp(java.time.LocalDateTime.now());
-                syncStatus.setSyncStatus("SYNCED");
+        retryHandler.executeWithRetryTransactional(() -> {
+            SyncStatus syncStatus = getOrCreateSyncStatus();
+            syncStatus.setLastBlockNumber(blockNumber);
+            syncStatus.setLastSyncTimestamp(java.time.LocalDateTime.now());
+            syncStatus.setSyncStatus("SYNCED");
 
-                SyncStatus savedStatus = syncStatusRepository.save(syncStatus);
-                log.info("Updated sync status: contract={}, blockNumber={}, syncStatus={}",
-                        savedStatus.getContractAddress(), savedStatus.getLastBlockNumber(),
-                        savedStatus.getSyncStatus());
+            SyncStatus savedStatus = syncStatusRepository.save(syncStatus);
+            log.info("Updated sync status: contract={}, blockNumber={}, syncStatus={}",
+                    savedStatus.getContractAddress(), savedStatus.getLastBlockNumber(),
+                    savedStatus.getSyncStatus());
 
-                return null;
-            },
-            "update sync status"
-        );
+            return null;
+        }, "update sync status");
     }
 
     @Override
     public BigInteger getLastSyncedBlockNumber() {
         log.debug("Getting last synced block number");
 
-        return retryHandler.executeWithRetry(
-            () -> {
-                SyncStatus syncStatus = getOrCreateSyncStatus();
-                return syncStatus.getLastBlockNumber();
-            },
-            "get last synced block number"
-        );
+        return retryHandler.executeWithRetry(() -> {
+            SyncStatus syncStatus = getOrCreateSyncStatus();
+            return syncStatus.getLastBlockNumber();
+        }, "get last synced block number");
     }
 
     @Override
     public BigInteger getCurrentBlockNumber() {
         log.debug("Getting current block number");
 
-        return retryHandler.executeWithRetry(
-            () -> {
-                try {
-                    org.web3j.protocol.core.methods.response.EthBlockNumber blockNumber =
-                            web3jService.getWeb3j().ethBlockNumber().send();
+        return retryHandler.executeWithRetry(() -> {
+            try {
+                org.web3j.protocol.core.methods.response.EthBlockNumber blockNumber = web3jService
+                        .getWeb3j().ethBlockNumber().send();
 
-                    if (blockNumber == null) {
-                        throw new BlockchainException("Block number response is null");
-                    }
-
-                    return blockNumber.getBlockNumber();
-                } catch (IOException e) {
-                    throw new BlockchainException("Failed to get current block number", e);
+                if (blockNumber == null) {
+                    throw new BlockchainException("Block number response is null");
                 }
-            },
-            "get current block number"
-        );
+
+                return blockNumber.getBlockNumber();
+            } catch (IOException e) {
+                throw new BlockchainException("Failed to get current block number", e);
+            }
+        }, "get current block number");
     }
 
     @Override
@@ -421,12 +419,13 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
             BigInteger startBlock = getLastSyncedBlockNumber();
 
             // 从最后同步区块的下一个区块开始监听，确保连续性
-            DefaultBlockParameter fromBlock = startBlock.compareTo(BigInteger.ZERO) > 0
+            DefaultBlockParameter fromBlock = startBlock.compareTo(BigInteger.ZERO) >= 0
                     ? DefaultBlockParameter.valueOf(startBlock.add(BigInteger.ONE))
                     : DefaultBlockParameterName.LATEST;
 
             log.info("Starting real-time event listening from block: {}",
-                    fromBlock instanceof DefaultBlockParameterName ? "LATEST" : startBlock.add(BigInteger.ONE));
+                    fromBlock instanceof DefaultBlockParameterName ? "LATEST"
+                            : startBlock.add(BigInteger.ONE));
 
             // 启动 EvidenceSubmitted 事件订阅
             evidenceSubmittedSubscription = evidenceStorageContract
@@ -493,8 +492,8 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
             }
 
             // 获取交易收据
-            TransactionReceipt receipt = web3jService.getWeb3j().ethGetTransactionReceipt(txHash).send()
-                    .getTransactionReceipt().orElseThrow(() -> new BlockchainException(
+            TransactionReceipt receipt = web3jService.getWeb3j().ethGetTransactionReceipt(txHash)
+                    .send().getTransactionReceipt().orElseThrow(() -> new BlockchainException(
                             "Transaction receipt not found: " + txHash));
 
             if (receipt == null) {
@@ -540,9 +539,11 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
                     .getEvidenceStatusChangedEvents(receipt);
 
             if (!statusChangedEvents.isEmpty()) {
-                log.debug("Found {} EvidenceStatusChanged events in receipt", statusChangedEvents.size());
+                log.debug("Found {} EvidenceStatusChanged events in receipt",
+                        statusChangedEvents.size());
                 for (EvidenceStorageContract.EvidenceStatusChangedEventResponse event : statusChangedEvents) {
-                    processEvidenceStatusChanged(event, blockNumber, transactionHash, blockTimestamp);
+                    processEvidenceStatusChanged(event, blockNumber, transactionHash,
+                            blockTimestamp);
                 }
             }
         } catch (Exception e) {
@@ -569,8 +570,8 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
      * 处理区块链事件
      */
     private void processBlockchainEvent(BlockchainEvent event) {
-        log.debug("Processing blockchain event: id={}, eventType={}, txHash={}",
-                event.getId(), event.getEventName(), event.getTransactionHash());
+        log.debug("Processing blockchain event: id={}, eventType={}, txHash={}", event.getId(),
+                event.getEventName(), event.getTransactionHash());
 
         try {
             // 路由到对应的处理器
@@ -584,8 +585,8 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
             // 标记事件为已处理
             eventStorageService.markEventAsProcessed(event.getId());
 
-            log.debug("Successfully processed event: id={}, eventType={}",
-                    event.getId(), event.getEventName());
+            log.debug("Successfully processed event: id={}, eventType={}", event.getId(),
+                    event.getEventName());
 
         } catch (Exception e) {
             log.error("Failed to process blockchain event: id={}, eventType={}, txHash={}",
@@ -623,8 +624,9 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
     /**
      * 处理 EvidenceSubmitted 事件
      */
-    private void processEvidenceSubmitted(EvidenceStorageContract.EvidenceSubmittedEventResponse event,
-                                        BigInteger blockNumber, String transactionHash, BigInteger blockTimestamp) {
+    private void processEvidenceSubmitted(
+            EvidenceStorageContract.EvidenceSubmittedEventResponse event, BigInteger blockNumber,
+            String transactionHash, BigInteger blockTimestamp) {
         try {
             log.debug("Processing EvidenceSubmitted event: evidenceId={}, submitter={}",
                     event.evidenceId, event.user);
@@ -632,23 +634,20 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
             // 创建事件对象
             BlockchainEvent blockchainEvent = new BlockchainEvent(
                     evidenceStorageContract.getContractAddress(),
-                    "EVIDENCE_SUBMITTED",
-                    blockNumber,
-                    transactionHash,
-                    blockTimestamp,
-                    objectMapper.writeValueAsString(event)
-            );
+                    EvidenceEventType.EVIDENCE_SUBMITTED.name(), blockNumber, transactionHash,
+                    blockTimestamp, objectMapper.writeValueAsString(event));
 
             // 保存事件
             BlockchainEvent savedEvent = eventStorageService.saveEvent(blockchainEvent);
-            log.debug("Saved EvidenceSubmitted event: id={}, evidenceId={}",
-                    savedEvent.getId(), event.evidenceId);
+            log.debug("Saved EvidenceSubmitted event: id={}, evidenceId={}", savedEvent.getId(),
+                    event.evidenceId);
 
             // 处理事件
             processBlockchainEvent(savedEvent);
 
         } catch (Exception e) {
-            log.error("Failed to process EvidenceSubmitted event: evidenceId={}", event.evidenceId, e);
+            log.error("Failed to process EvidenceSubmitted event: evidenceId={}", event.evidenceId,
+                    e);
             throw new BlockchainException("Failed to process EvidenceSubmitted event", e);
         }
     }
@@ -656,32 +655,31 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
     /**
      * 处理 EvidenceStatusChanged 事件
      */
-    private void processEvidenceStatusChanged(EvidenceStorageContract.EvidenceStatusChangedEventResponse event,
-                                             BigInteger blockNumber, String transactionHash, BigInteger blockTimestamp) {
+    private void processEvidenceStatusChanged(
+            EvidenceStorageContract.EvidenceStatusChangedEventResponse event,
+            BigInteger blockNumber, String transactionHash, BigInteger blockTimestamp) {
         try {
-            log.debug("Processing EvidenceStatusChanged event: evidenceId={}, oldStatus={}, newStatus={}",
+            log.debug(
+                    "Processing EvidenceStatusChanged event: evidenceId={}, oldStatus={}, newStatus={}",
                     event.evidenceId, event.oldStatus, event.newStatus);
 
             // 创建事件对象
             BlockchainEvent blockchainEvent = new BlockchainEvent(
                     evidenceStorageContract.getContractAddress(),
-                    "EVIDENCE_STATUS_CHANGED",
-                    blockNumber,
-                    transactionHash,
-                    blockTimestamp,
-                    objectMapper.writeValueAsString(event)
-            );
+                    EvidenceEventType.EVIDENCE_STATUS_CHANGED.name(), blockNumber, transactionHash,
+                    blockTimestamp, objectMapper.writeValueAsString(event));
 
             // 保存事件
             BlockchainEvent savedEvent = eventStorageService.saveEvent(blockchainEvent);
-            log.debug("Saved EvidenceStatusChanged event: id={}, evidenceId={}",
-                    savedEvent.getId(), event.evidenceId);
+            log.debug("Saved EvidenceStatusChanged event: id={}, evidenceId={}", savedEvent.getId(),
+                    event.evidenceId);
 
             // 处理事件
             processBlockchainEvent(savedEvent);
 
         } catch (Exception e) {
-            log.error("Failed to process EvidenceStatusChanged event: evidenceId={}", event.evidenceId, e);
+            log.error("Failed to process EvidenceStatusChanged event: evidenceId={}",
+                    event.evidenceId, e);
             throw new BlockchainException("Failed to process EvidenceStatusChanged event", e);
         }
     }
@@ -690,7 +688,7 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
      * 处理 EvidenceRevoked 事件
      */
     private void processEvidenceRevoked(EvidenceStorageContract.EvidenceRevokedEventResponse event,
-                                        BigInteger blockNumber, String transactionHash, BigInteger blockTimestamp) {
+            BigInteger blockNumber, String transactionHash, BigInteger blockTimestamp) {
         try {
             log.debug("Processing EvidenceRevoked event: evidenceId={}, revoker={}",
                     event.evidenceId, event.revoker);
@@ -698,23 +696,20 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
             // 创建事件对象
             BlockchainEvent blockchainEvent = new BlockchainEvent(
                     evidenceStorageContract.getContractAddress(),
-                    "EVIDENCE_REVOKED",
-                    blockNumber,
-                    transactionHash,
-                    blockTimestamp,
-                    objectMapper.writeValueAsString(event)
-            );
+                    EvidenceEventType.EVIDENCE_REVOKED.name(), blockNumber, transactionHash,
+                    blockTimestamp, objectMapper.writeValueAsString(event));
 
             // 保存事件
             BlockchainEvent savedEvent = eventStorageService.saveEvent(blockchainEvent);
-            log.debug("Saved EvidenceRevoked event: id={}, evidenceId={}",
-                    savedEvent.getId(), event.evidenceId);
+            log.debug("Saved EvidenceRevoked event: id={}, evidenceId={}", savedEvent.getId(),
+                    event.evidenceId);
 
             // 处理事件
             processBlockchainEvent(savedEvent);
 
         } catch (Exception e) {
-            log.error("Failed to process EvidenceRevoked event: evidenceId={}", event.evidenceId, e);
+            log.error("Failed to process EvidenceRevoked event: evidenceId={}", event.evidenceId,
+                    e);
             throw new BlockchainException("Failed to process EvidenceRevoked event", e);
         }
     }
@@ -722,8 +717,10 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
     /**
      * 处理实时 EvidenceSubmitted 事件
      */
-    private void processRealTimeEvidenceSubmitted(EvidenceStorageContract.EvidenceSubmittedEventResponse event) throws Exception {
-        log.debug("Processing real-time EvidenceSubmitted event: evidenceId={}, submitter={}, timestamp={}",
+    private void processRealTimeEvidenceSubmitted(
+            EvidenceStorageContract.EvidenceSubmittedEventResponse event) throws Exception {
+        log.debug(
+                "Processing real-time EvidenceSubmitted event: evidenceId={}, submitter={}, timestamp={}",
                 event.evidenceId, event.user, event.timestamp);
         processLogResult(event.log);
     }
@@ -731,8 +728,10 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
     /**
      * 处理实时 EvidenceStatusChanged 事件
      */
-    private void processRealTimeEvidenceStatusChanged(EvidenceStorageContract.EvidenceStatusChangedEventResponse event) throws Exception {
-        log.debug("Processing real-time EvidenceStatusChanged event: evidenceId={}, oldStatus={}, newStatus={}",
+    private void processRealTimeEvidenceStatusChanged(
+            EvidenceStorageContract.EvidenceStatusChangedEventResponse event) throws Exception {
+        log.debug(
+                "Processing real-time EvidenceStatusChanged event: evidenceId={}, oldStatus={}, newStatus={}",
                 event.evidenceId, event.oldStatus, event.newStatus);
         processLogResult(event.log);
     }
@@ -740,8 +739,10 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
     /**
      * 处理实时 EvidenceRevoked 事件
      */
-    private void processRealTimeEvidenceRevoked(EvidenceStorageContract.EvidenceRevokedEventResponse event) throws Exception {
-        log.debug("Processing real-time EvidenceRevoked event: evidenceId={}, revoker={}, reason={}",
+    private void processRealTimeEvidenceRevoked(
+            EvidenceStorageContract.EvidenceRevokedEventResponse event) throws Exception {
+        log.debug(
+                "Processing real-time EvidenceRevoked event: evidenceId={}, revoker={}, reason={}",
                 event.evidenceId, event.revoker, event.timestamp);
 
         processLogResult(event.log);
@@ -754,12 +755,14 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
         log.info("Disposing all event subscriptions...");
 
         try {
-            if (evidenceSubmittedSubscription != null && !evidenceSubmittedSubscription.isDisposed()) {
+            if (evidenceSubmittedSubscription != null
+                    && !evidenceSubmittedSubscription.isDisposed()) {
                 evidenceSubmittedSubscription.dispose();
                 log.debug("Disposed EvidenceSubmitted subscription");
             }
 
-            if (evidenceStatusChangedSubscription != null && !evidenceStatusChangedSubscription.isDisposed()) {
+            if (evidenceStatusChangedSubscription != null
+                    && !evidenceStatusChangedSubscription.isDisposed()) {
                 evidenceStatusChangedSubscription.dispose();
                 log.debug("Disposed EvidenceStatusChanged subscription");
             }
@@ -822,12 +825,14 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
                         evidenceSubmittedSubscription.dispose();
                     }
                     evidenceSubmittedSubscription = evidenceStorageContract
-                            .evidenceSubmittedEventFlowable(fromBlock, DefaultBlockParameterName.LATEST)
+                            .evidenceSubmittedEventFlowable(fromBlock,
+                                    DefaultBlockParameterName.LATEST)
                             .subscribe(event -> {
                                 try {
                                     processRealTimeEvidenceSubmitted(event);
                                 } catch (Exception e) {
-                                    log.error("Error processing real-time EvidenceSubmitted event", e);
+                                    log.error("Error processing real-time EvidenceSubmitted event",
+                                            e);
                                 }
                             }, error -> {
                                 log.error("Error in EvidenceSubmitted event subscription", error);
@@ -840,15 +845,19 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
                         evidenceStatusChangedSubscription.dispose();
                     }
                     evidenceStatusChangedSubscription = evidenceStorageContract
-                            .evidenceStatusChangedEventFlowable(fromBlock, DefaultBlockParameterName.LATEST)
+                            .evidenceStatusChangedEventFlowable(fromBlock,
+                                    DefaultBlockParameterName.LATEST)
                             .subscribe(event -> {
                                 try {
                                     processRealTimeEvidenceStatusChanged(event);
                                 } catch (Exception e) {
-                                    log.error("Error processing real-time EvidenceStatusChanged event", e);
+                                    log.error(
+                                            "Error processing real-time EvidenceStatusChanged event",
+                                            e);
                                 }
                             }, error -> {
-                                log.error("Error in EvidenceStatusChanged event subscription", error);
+                                log.error("Error in EvidenceStatusChanged event subscription",
+                                        error);
                                 handleSubscriptionError("EvidenceStatusChanged", error);
                             });
                     break;
@@ -858,12 +867,14 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
                         evidenceRevokedSubscription.dispose();
                     }
                     evidenceRevokedSubscription = evidenceStorageContract
-                            .evidenceRevokedEventFlowable(fromBlock, DefaultBlockParameterName.LATEST)
+                            .evidenceRevokedEventFlowable(fromBlock,
+                                    DefaultBlockParameterName.LATEST)
                             .subscribe(event -> {
                                 try {
                                     processRealTimeEvidenceRevoked(event);
                                 } catch (Exception e) {
-                                    log.error("Error processing real-time EvidenceRevoked event", e);
+                                    log.error("Error processing real-time EvidenceRevoked event",
+                                            e);
                                 }
                             }, error -> {
                                 log.error("Error in EvidenceRevoked event subscription", error);
@@ -881,4 +892,4 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
             log.error("Failed to restart {} subscription", eventType, e);
         }
     }
-    }
+}

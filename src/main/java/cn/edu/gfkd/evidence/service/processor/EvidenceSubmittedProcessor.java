@@ -3,8 +3,6 @@ package cn.edu.gfkd.evidence.service.processor;
 import java.io.IOException;
 import java.math.BigInteger;
 
-import cn.edu.gfkd.evidence.exception.EventProcessingException;
-import cn.edu.gfkd.evidence.service.storage.EventStorageService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,19 +11,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import cn.edu.gfkd.evidence.entity.BlockchainEvent;
 import cn.edu.gfkd.evidence.entity.EvidenceEntity;
-import cn.edu.gfkd.evidence.repository.EvidenceRepository;
+import cn.edu.gfkd.evidence.enums.EvidenceEventType;
+import cn.edu.gfkd.evidence.exception.EventProcessingException;
 import cn.edu.gfkd.evidence.generated.EvidenceStorageContract;
+import cn.edu.gfkd.evidence.repository.EvidenceRepository;
+import cn.edu.gfkd.evidence.service.storage.EventStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * 证据提交事件处理器
  * 
- * 主要职责：
- * 1. 处理EvidenceSubmitted事件
- * 2. 从智能合约获取完整的证据数据
- * 3. 创建或更新证据记录
- * 4. 确保证据数据的一致性
+ * 主要职责： 1. 处理EvidenceSubmitted事件 2. 从智能合约获取完整的证据数据 3. 创建或更新证据记录 4. 确保证据数据的一致性
  */
 @Service @RequiredArgsConstructor @Slf4j
 public class EvidenceSubmittedProcessor implements BlockchainEventProcessor {
@@ -35,11 +32,10 @@ public class EvidenceSubmittedProcessor implements BlockchainEventProcessor {
     private final EvidenceStorageContract evidenceStorageContract;
     private final ObjectMapper objectMapper;
 
-    @Override
-    @Transactional
+    @Override @Transactional
     public void processEvent(BlockchainEvent event) throws EventProcessingException {
-        log.debug("Processing EvidenceSubmitted event: id={}, txHash={}", 
-                event.getId(), event.getTransactionHash());
+        log.debug("Processing EvidenceSubmitted event: id={}, txHash={}", event.getId(),
+                event.getTransactionHash());
 
         try {
             // 解析事件数据
@@ -56,10 +52,11 @@ public class EvidenceSubmittedProcessor implements BlockchainEventProcessor {
             EvidenceEntity evidence = getCompleteEvidenceFromContract(eventData.evidenceId);
             if (evidence == null) {
                 // 如果合约调用失败，不存储该证据，留着后期再处理
-                String errorMsg = "Failed to retrieve evidence from contract: " + eventData.evidenceId;
+                String errorMsg = "Failed to retrieve evidence from contract: "
+                        + eventData.evidenceId;
                 log.warn(errorMsg);
-                throw new EventProcessingException(errorMsg, 
-                        event.getEventName(), event.getId().toString(), true);
+                throw new EventProcessingException(errorMsg, event.getEventName(),
+                        event.getId().toString(), true);
             }
 
             // 设置区块链特定字段
@@ -69,7 +66,8 @@ public class EvidenceSubmittedProcessor implements BlockchainEventProcessor {
             // 保存证据记录
             EvidenceEntity savedEvidence = evidenceRepository.save(evidence);
 
-            log.info("Successfully created new evidence record for evidenceId: {} with id: {} from contract", 
+            log.info(
+                    "Successfully created new evidence record for evidenceId: {} with id: {} from contract",
                     eventData.evidenceId, savedEvidence.getId());
 
         } catch (EventProcessingException e) {
@@ -77,14 +75,14 @@ public class EvidenceSubmittedProcessor implements BlockchainEventProcessor {
         } catch (Exception e) {
             String errorMsg = "Failed to process EvidenceSubmitted event: " + e.getMessage();
             log.error(errorMsg, e);
-            throw new EventProcessingException(errorMsg, 
-                    event.getEventName(), event.getId().toString(), e, true);
+            throw new EventProcessingException(errorMsg, event.getEventName(),
+                    event.getId().toString(), e, true);
         }
     }
 
     @Override
     public String getSupportedEventType() {
-        return "EvidenceSubmitted";
+        return EvidenceEventType.EVIDENCE_SUBMITTED.name();
     }
 
     @Override
@@ -94,7 +92,7 @@ public class EvidenceSubmittedProcessor implements BlockchainEventProcessor {
 
     @Override
     public boolean canProcess(BlockchainEvent event) {
-        return "EvidenceSubmitted".equals(event.getEventName());
+        return getSupportedEventType().equals(event.getEventName());
     }
 
     @Override
@@ -102,23 +100,22 @@ public class EvidenceSubmittedProcessor implements BlockchainEventProcessor {
         return "EvidenceSubmitted事件处理器 - 负责处理新证据提交事件，从智能合约获取完整证据数据并创建证据记录";
     }
 
-    
     /**
      * 解析事件数据
      */
     private EvidenceSubmittedEventData parseEventData(BlockchainEvent event) throws IOException {
         try {
             JsonNode jsonNode = objectMapper.readTree(event.getRawData());
-            
+
             // 尝试从原始数据中解析evidenceId
             String evidenceId = extractEvidenceIdFromJson(jsonNode);
-            
+
             if (evidenceId == null || evidenceId.isEmpty()) {
                 throw new IOException("Cannot extract evidenceId from event data");
             }
-            
+
             return new EvidenceSubmittedEventData(evidenceId, event.getTransactionHash());
-            
+
         } catch (IOException e) {
             log.error("Failed to parse EvidenceSubmitted event data: {}", e.getMessage(), e);
             throw new IOException("Failed to parse event data: " + e.getMessage(), e);
@@ -130,23 +127,15 @@ public class EvidenceSubmittedProcessor implements BlockchainEventProcessor {
      */
     private String extractEvidenceIdFromJson(JsonNode jsonNode) {
         // 尝试多种可能的字段路径
-        String[] possiblePaths = {
-            "evidenceId",
-            "evidence_id",
-            "evidenceID",
-            "params.evidenceId",
-            "params.evidence_id",
-            "returnValues.evidenceId",
-            "returnValues.evidence_id",
-            "args.evidenceId",
-            "args.evidence_id"
-        };
+        String[] possiblePaths = { "evidenceId", "evidence_id", "evidenceID", "params.evidenceId",
+                "params.evidence_id", "returnValues.evidenceId", "returnValues.evidence_id",
+                "args.evidenceId", "args.evidence_id" };
 
         for (String path : possiblePaths) {
             try {
                 JsonNode node = jsonNode;
                 String[] parts = path.split("\\.");
-                
+
                 for (String part : parts) {
                     if (node.has(part)) {
                         node = node.get(part);
@@ -155,7 +144,7 @@ public class EvidenceSubmittedProcessor implements BlockchainEventProcessor {
                         break;
                     }
                 }
-                
+
                 if (node != null && node.isTextual()) {
                     return node.asText();
                 }
@@ -199,15 +188,18 @@ public class EvidenceSubmittedProcessor implements BlockchainEventProcessor {
                                 : BigInteger.ZERO,
                         contractEvidence.memo != null ? contractEvidence.memo : "");
 
-                log.debug("Successfully retrieved evidence from contract: evidenceId={}", evidenceId);
+                log.debug("Successfully retrieved evidence from contract: evidenceId={}",
+                        evidenceId);
                 return evidence;
             } else {
-                log.warn("Evidence not found in contract or does not exist: evidenceId={}", evidenceId);
+                log.warn("Evidence not found in contract or does not exist: evidenceId={}",
+                        evidenceId);
                 return null;
             }
 
         } catch (Exception e) {
-            log.error("Failed to retrieve evidence {} from smart contract: {}", evidenceId, e.getMessage(), e);
+            log.error("Failed to retrieve evidence {} from smart contract: {}", evidenceId,
+                    e.getMessage(), e);
             return null;
         }
     }

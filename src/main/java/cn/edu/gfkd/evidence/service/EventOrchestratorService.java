@@ -55,7 +55,6 @@ public class EventOrchestratorService {
         this.blockchainEvidenceEventService = blockchainEvidenceEventService;
         this.eventStorageService = eventStorageService;
         this.eventProcessors = eventProcessors;
-        init();
     }
 
     /**
