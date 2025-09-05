@@ -33,17 +33,22 @@ export const SearchBar = () => {
   };
 
   return (
-    <form onSubmit={handleSearch} className="flex items-center justify-end mb-5 space-x-3 mx-5">
-      <input
-        className="border-primary bg-base-100 text-base-content placeholder:text-base-content/50 p-2 mr-2 w-full md:w-1/2 lg:w-1/3 rounded-md shadow-md focus:outline-hidden focus:ring-2 focus:ring-accent"
-        type="text"
-        value={searchInput}
-        placeholder="Search by hash or address"
-        onChange={e => setSearchInput(e.target.value)}
-      />
-      <button className="btn btn-sm btn-primary" type="submit">
-        Search
-      </button>
+    <form onSubmit={handleSearch} className="flex items-center justify-end mb-8">
+      <div className="relative w-full md:w-1/2 lg:w-1/3">
+        <input
+          className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+          type="text"
+          value={searchInput}
+          placeholder="Search by hash or address"
+          onChange={e => setSearchInput(e.target.value)}
+        />
+        <button 
+          type="submit"
+          className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors duration-200"
+        >
+          Search
+        </button>
+      </div>
     </form>
   );
 };

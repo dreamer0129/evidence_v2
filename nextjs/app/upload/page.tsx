@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { CheckCircle, FileText, Hash as HashIcon, Loader2, Upload as UploadIcon } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CheckCircle, FileText, Hash as HashIcon, Loader2, Upload as UploadIcon, X } from "lucide-react";
 import type { NextPage } from "next";
 import { FileUpload } from "~~/components/evidence/FileUpload";
 import { GlassButton, GlassCard } from "~~/components/evidence/GlassContainer";
@@ -31,6 +31,7 @@ const Upload: NextPage = () => {
   const [hashDescription, setHashDescription] = useState("");
   const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
 
   const { writeContractAsync: submitEvidence, isMining: isSubmittingEvidence } = useScaffoldWriteContract({
     contractName: "EvidenceStorageContract",
@@ -200,6 +201,24 @@ const Upload: NextPage = () => {
     }
   };
 
+  // Auto-dismiss notification after 5 seconds
+  useEffect(() => {
+    if (submissionResult) {
+      setShowSuccessNotification(true);
+      const timer = setTimeout(() => {
+        setShowSuccessNotification(false);
+        setSubmissionResult(null);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [submissionResult]);
+
+  const handleCloseNotification = () => {
+    setShowSuccessNotification(false);
+    setSubmissionResult(null);
+  };
+
   return (
     <PageBackgroundWrapper>
       <div className="min-h-screen pt-24 pb-8 px-4 sm:px-6 lg:px-8">
@@ -211,8 +230,8 @@ const Upload: NextPage = () => {
           </div>
 
           {/* Success Notification */}
-          {submissionResult && (
-            <div className="mb-6">
+          {showSuccessNotification && submissionResult && (
+            <div className="mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
               <GlassCard intensity="high" className="border-green-200/50">
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0">
@@ -229,6 +248,13 @@ const Upload: NextPage = () => {
                       </div>
                     </div>
                   </div>
+                  <button
+                    onClick={handleCloseNotification}
+                    className="flex-shrink-0 p-1 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/20 transition-colors"
+                    aria-label="关闭通知"
+                  >
+                    <X className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  </button>
                 </div>
               </GlassCard>
             </div>
@@ -385,10 +411,10 @@ const Upload: NextPage = () => {
                       }
                     >
                       {isSubmitting || isSubmittingEvidence ? (
-                        <>
+                        <div className="flex items-center justify-center">
                           <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          提交中...
-                        </>
+                          <span>提交中...</span>
+                        </div>
                       ) : (
                         "提交存证"
                       )}
@@ -443,10 +469,10 @@ const Upload: NextPage = () => {
                       disabled={isSubmitting || isSubmittingHashEvidence || !hashInput.trim()}
                     >
                       {isSubmitting || isSubmittingHashEvidence ? (
-                        <>
+                        <div className="flex items-center justify-center">
                           <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          提交中...
-                        </>
+                          <span>提交中...</span>
+                        </div>
                       ) : (
                         "提交存证"
                       )}
