@@ -1,9 +1,11 @@
 package cn.edu.gfkd.evidence.controller;
 
 import cn.edu.gfkd.evidence.dto.ApiResponse;
+import cn.edu.gfkd.evidence.dto.CertificateDTO;
 import cn.edu.gfkd.evidence.dto.EvidenceDTO;
 import cn.edu.gfkd.evidence.entity.EvidenceEntity;
 import cn.edu.gfkd.evidence.service.storage.EvidenceStorageService;
+import cn.edu.gfkd.evidence.service.CertificateStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -13,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,6 +26,9 @@ public class EvidenceController {
 
     @Autowired
     private EvidenceStorageService evidenceStorageService;
+    
+    @Autowired
+    private CertificateStorageService certificateStorageService;
 
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
@@ -173,6 +179,8 @@ public class EvidenceController {
         dto.setRevokerAddress(evidence.getRevokerAddress());
         dto.setCreatedAt(evidence.getCreatedAt());
         dto.setUpdatedAt(evidence.getUpdatedAt());
+        dto.setCertificateId(evidence.getCertificateId());
+        dto.setCertificateAvailable(evidence.getCertificateId() != null && !evidence.getCertificateId().isEmpty());
 
         return dto;
     }
@@ -221,5 +229,97 @@ public class EvidenceController {
         public long getRevokedCount() {
             return revokedCount;
         }
+    }
+
+    // Certificate endpoints
+    @GetMapping("/{id}/certificate")
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<CertificateDTO>> getCertificateByEvidenceId(@PathVariable Long id) {
+        EvidenceEntity evidence = evidenceStorageService.getEvidenceById(id)
+                .orElseThrow(() -> new RuntimeException("Evidence not found with id: " + id));
+
+        if (evidence.getCertificateId() == null || evidence.getCertificateId().isEmpty()) {
+            return ResponseEntity.ok(ApiResponse.<CertificateDTO>success("Certificate not available for this evidence", null));
+        }
+
+        CertificateDTO certificateDTO = convertToCertificateDTO(evidence);
+        return ResponseEntity.ok(ApiResponse.success(certificateDTO));
+    }
+
+    @GetMapping("/evidenceId/{evidenceId}/certificate")
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<CertificateDTO>> getCertificateByEvidenceIdString(@PathVariable String evidenceId) {
+        EvidenceEntity evidence = evidenceStorageService.getEvidenceByEvidenceId(evidenceId)
+                .orElseThrow(() -> new RuntimeException("Evidence not found with evidenceId: " + evidenceId));
+
+        if (evidence.getCertificateId() == null || evidence.getCertificateId().isEmpty()) {
+            return ResponseEntity.ok(ApiResponse.<CertificateDTO>success("Certificate not available for this evidence", null));
+        }
+
+        CertificateDTO certificateDTO = convertToCertificateDTO(evidence);
+        return ResponseEntity.ok(ApiResponse.success(certificateDTO));
+    }
+
+    @GetMapping("/{id}/certificate/download")
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    public ResponseEntity<byte[]> downloadCertificate(@PathVariable Long id) {
+        EvidenceEntity evidence = evidenceStorageService.getEvidenceById(id)
+                .orElseThrow(() -> new RuntimeException("Evidence not found with id: " + id));
+
+        if (evidence.getCertificateId() == null || evidence.getCertificateId().isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        try {
+            byte[] certificateBytes = certificateStorageService.getCertificateBytes(evidence.getCertificateId());
+            String filename = "certificate_" + evidence.getEvidenceId() + ".pdf";
+            
+            return ResponseEntity.ok()
+                    .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+                    .header("Content-Type", "application/pdf")
+                    .body(certificateBytes);
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/evidenceId/{evidenceId}/certificate/download")
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    public ResponseEntity<byte[]> downloadCertificateByEvidenceId(@PathVariable String evidenceId) {
+        EvidenceEntity evidence = evidenceStorageService.getEvidenceByEvidenceId(evidenceId)
+                .orElseThrow(() -> new RuntimeException("Evidence not found with evidenceId: " + evidenceId));
+
+        if (evidence.getCertificateId() == null || evidence.getCertificateId().isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        try {
+            byte[] certificateBytes = certificateStorageService.getCertificateBytes(evidence.getCertificateId());
+            String filename = "certificate_" + evidence.getEvidenceId() + ".pdf";
+            
+            return ResponseEntity.ok()
+                    .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+                    .header("Content-Type", "application/pdf")
+                    .body(certificateBytes);
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    private CertificateDTO convertToCertificateDTO(EvidenceEntity evidence) {
+        CertificateDTO dto = new CertificateDTO();
+        dto.setId(evidence.getId());
+        dto.setEvidenceId(evidence.getEvidenceId());
+        dto.setCertificateId(evidence.getCertificateId());
+        dto.setGeneratedAt(evidence.getUpdatedAt()); // Use updated time as generation time
+        dto.setStatus(evidence.getCertificateId() != null ? "generated" : "pending");
+        
+        try {
+            dto.setFileSize(certificateStorageService.getCertificateFileSize(evidence.getCertificateId()));
+        } catch (IOException e) {
+            dto.setFileSize(0L);
+        }
+        
+        return dto;
     }
 }

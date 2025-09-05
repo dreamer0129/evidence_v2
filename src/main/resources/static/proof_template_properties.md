@@ -1,0 +1,11 @@
+id
+content
+owner
+fileName
+fileType
+fileSize
+fileHash
+txHash
+blockHeight
+timestamp
+memo

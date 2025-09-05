@@ -15,7 +15,7 @@ import cn.edu.gfkd.evidence.enums.EvidenceEventType;
 import cn.edu.gfkd.evidence.exception.EventProcessingException;
 import cn.edu.gfkd.evidence.generated.EvidenceStorageContract;
 import cn.edu.gfkd.evidence.repository.EvidenceRepository;
-import cn.edu.gfkd.evidence.service.storage.EventStorageService;
+import cn.edu.gfkd.evidence.service.CertificateStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -28,9 +28,9 @@ import lombok.extern.slf4j.Slf4j;
 public class EvidenceSubmittedProcessor implements BlockchainEventProcessor {
 
     private final EvidenceRepository evidenceRepository;
-    private final EventStorageService eventStorageService;
     private final EvidenceStorageContract evidenceStorageContract;
     private final ObjectMapper objectMapper;
+    private final CertificateStorageService certificateStorageService;
 
     @Override @Transactional
     public void processEvent(BlockchainEvent event) throws EventProcessingException {
@@ -63,12 +63,23 @@ public class EvidenceSubmittedProcessor implements BlockchainEventProcessor {
             evidence.setTransactionHash(event.getTransactionHash());
             evidence.setStatus("effective");
 
+            // 生成并存储证书
+            try {
+                evidence = certificateStorageService.generateAndStoreCertificate(evidence);
+                log.debug("Certificate generated for evidenceId: {}", eventData.evidenceId);
+            } catch (Exception e) {
+                // 证书生成失败不应该影响证据存储，只记录警告
+                log.warn("Failed to generate certificate for evidenceId: {}, evidence still stored. Error: {}", 
+                        eventData.evidenceId, e.getMessage(), e);
+            }
+
             // 保存证据记录
             EvidenceEntity savedEvidence = evidenceRepository.save(evidence);
 
             log.info(
-                    "Successfully created new evidence record for evidenceId: {} with id: {} from contract",
-                    eventData.evidenceId, savedEvidence.getId());
+                    "Successfully created new evidence record for evidenceId: {} with id: {} from contract, certificate: {}",
+                    eventData.evidenceId, savedEvidence.getId(), 
+                    savedEvidence.getCertificateId() != null ? "generated" : "failed");
 
         } catch (EventProcessingException e) {
             throw e;

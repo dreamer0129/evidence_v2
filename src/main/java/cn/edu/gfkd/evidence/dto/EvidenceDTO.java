@@ -28,6 +28,10 @@ public class EvidenceDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     
+    // Certificate information
+    private String certificateId;
+    private boolean certificateAvailable;
+    
     // Getters and Setters
     public Long getId() {
         return id;
@@ -171,5 +175,21 @@ public class EvidenceDTO {
     
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+    
+    public String getCertificateId() {
+        return certificateId;
+    }
+    
+    public void setCertificateId(String certificateId) {
+        this.certificateId = certificateId;
+    }
+    
+    public boolean isCertificateAvailable() {
+        return certificateAvailable;
+    }
+    
+    public void setCertificateAvailable(boolean certificateAvailable) {
+        this.certificateAvailable = certificateAvailable;
     }
 }

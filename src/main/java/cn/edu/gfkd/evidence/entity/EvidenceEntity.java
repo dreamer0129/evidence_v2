@@ -72,6 +72,9 @@ public class EvidenceEntity {
     @UpdateTimestamp @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "certificate_id", length = 100)
+    private String certificateId;
+
     public EvidenceEntity() {
     }
 
@@ -91,6 +94,25 @@ public class EvidenceEntity {
         this.transactionHash = transactionHash;
         this.blockTimestamp = blockTimestamp;
         this.memo = memo;
+    }
+
+    public EvidenceEntity(String evidenceId, String userAddress, String fileName, String mimeType,
+            Long fileSize, BigInteger fileCreationTime, String hashAlgorithm, String hashValue,
+            BigInteger blockNumber, String transactionHash, BigInteger blockTimestamp,
+            String memo, String certificateId) {
+        this.evidenceId = evidenceId;
+        this.userAddress = userAddress;
+        this.fileName = fileName;
+        this.mimeType = mimeType;
+        this.fileSize = fileSize;
+        this.fileCreationTime = fileCreationTime;
+        this.hashAlgorithm = hashAlgorithm;
+        this.hashValue = hashValue;
+        this.blockNumber = blockNumber;
+        this.transactionHash = transactionHash;
+        this.blockTimestamp = blockTimestamp;
+        this.memo = memo;
+        this.certificateId = certificateId;
     }
 
     // Getters and Setters
@@ -236,5 +258,13 @@ public class EvidenceEntity {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getCertificateId() {
+        return certificateId;
+    }
+
+    public void setCertificateId(String certificateId) {
+        this.certificateId = certificateId;
     }
 }
