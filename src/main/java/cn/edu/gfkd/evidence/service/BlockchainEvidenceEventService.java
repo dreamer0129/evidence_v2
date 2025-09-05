@@ -81,4 +81,21 @@ public interface BlockchainEvidenceEventService {
      * @param eventProcessor 事件处理器
      */
     void setEventProcessor(BlockchainEventProcessor eventProcessor);
+
+    /**
+     * 处理未处理的事件
+     * 
+     * @throws BlockchainException 处理失败时抛出
+     */
+    void processUnprocessedEvents();
+
+    /**
+     * 启动未处理事件的周期性处理
+     */
+    void startUnprocessedEventsScheduler();
+
+    /**
+     * 停止未处理事件的周期性处理
+     */
+    void stopUnprocessedEventsScheduler();
 }

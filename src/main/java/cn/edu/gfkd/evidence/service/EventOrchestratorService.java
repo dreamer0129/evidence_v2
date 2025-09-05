@@ -9,7 +9,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import cn.edu.gfkd.evidence.entity.BlockchainEvent;
 import cn.edu.gfkd.evidence.exception.BlockchainException;
@@ -163,87 +162,6 @@ public class EventOrchestratorService {
             log.error("Failed to restart blockchain event processing system", e);
             throw new BlockchainException("Failed to restart blockchain event processing system",
                     e);
-        }
-    }
-
-    /**
-     * 处理区块链事件（统一入口）
-     */
-    @Transactional
-    public void processBlockchainEvent(BlockchainEvent event) {
-        log.debug(
-                "Processing blockchain event through orchestrator: id={}, eventType={}, txHash={}",
-                event.getId(), event.getEventName(), event.getTransactionHash());
-
-        try {
-            // 首先保存事件到数据库（如果还没有保存）
-            BlockchainEvent savedEvent = ensureEventSaved(event);
-
-            // 路由到对应的事件处理器
-            BlockchainEventProcessor processor = findEventProcessor(savedEvent);
-            if (processor == null) {
-                log.warn("No processor found for event type: {}", savedEvent.getEventName());
-                return;
-            }
-
-            // 处理事件
-            processor.processEvent(savedEvent);
-
-            // 标记事件为已处理
-            eventStorageService.markEventAsProcessed(savedEvent.getId());
-
-            log.debug("Successfully processed event: id={}, eventType={}", savedEvent.getId(),
-                    savedEvent.getEventName());
-
-        } catch (Exception e) {
-            log.error("Failed to process blockchain event: id={}, eventType={}, txHash={}",
-                    event.getId(), event.getEventName(), event.getTransactionHash(), e);
-
-            // 增加事件处理失败次数
-            eventStorageService.incrementEventProcessingFailures(event.getId());
-
-            throw new BlockchainException("Failed to process blockchain event", e);
-        }
-    }
-
-    /**
-     * 处理未处理的事件
-     */
-    public void processUnprocessedEvents() {
-        if (!isRunning.get()) {
-            log.debug("System not running, skipping unprocessed events processing");
-            return;
-        }
-
-        try {
-            log.debug("Processing unprocessed events through orchestrator");
-
-            // 获取未处理的事件
-            var unprocessedEvents = eventStorageService
-                    .findUnprocessedEvents(org.springframework.data.domain.PageRequest.of(0, 100));
-
-            if (unprocessedEvents.isEmpty()) {
-                log.debug("No unprocessed events found");
-                return;
-            }
-
-            log.info("Found {} unprocessed events to process", unprocessedEvents.size());
-
-            // 处理每个未处理的事件
-            for (BlockchainEvent event : unprocessedEvents) {
-                try {
-                    processBlockchainEvent(event);
-                } catch (Exception e) {
-                    log.error("Failed to process unprocessed event: id={}, txHash={}, eventType={}",
-                            event.getId(), event.getTransactionHash(), event.getEventName(), e);
-                    // 继续处理下一个事件
-                }
-            }
-
-            log.debug("Completed processing unprocessed events");
-
-        } catch (Exception e) {
-            log.error("Error processing unprocessed events", e);
         }
     }
 

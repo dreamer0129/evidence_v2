@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -58,6 +61,10 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
     // 监听状态控制
     private final AtomicBoolean isListening = new AtomicBoolean(false);
 
+    // 未处理事件调度器
+    private ScheduledExecutorService unprocessedEventsScheduler;
+    private final AtomicBoolean isUnprocessedEventsSchedulerRunning = new AtomicBoolean(false);
+
     // 同步配置
     @Value("${blockchain.sync.batch-size:100}")
     private int batchSize;
@@ -71,6 +78,13 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
 
     @Value("${blockchain.sync.retry-delay-ms:1000}")
     private long retryDelayMs;
+
+    // 未处理事件调度配置
+    @Value("${blockchain.unprocessed-events.interval-sec:60}")
+    private long unprocessedEventsIntervalSec;
+
+    @Value("${blockchain.unprocessed-events.initial-delay-sec:30}")
+    private long unprocessedEventsInitialDelaySec;
 
     public BlockchainEvidenceEventServiceImpl(Web3jService web3jService,
             EventStorageService eventStorageService, RetryHandler retryHandler,
@@ -108,6 +122,9 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
             // 启动实时事件监听
             startRealTimeEventListening();
 
+            // 启动未处理事件调度器
+            startUnprocessedEventsScheduler();
+
             log.info("Blockchain event listener started successfully");
 
         } catch (Exception e) {
@@ -128,6 +145,9 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
 
         try {
             isListening.set(false);
+
+            // 停止未处理事件调度器
+            stopUnprocessedEventsScheduler();
 
             // 取消所有的事件订阅
             disposeSubscriptions();
@@ -574,9 +594,12 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
         if (hasEvents) {
             try {
                 updateSyncStatus(blockNumber);
-                log.debug("Updated sync status to block {} after processing real-time events", blockNumber);
+                log.debug("Updated sync status to block {} after processing real-time events",
+                        blockNumber);
             } catch (Exception e) {
-                log.error("Failed to update sync status after processing real-time events from block {}", blockNumber, e);
+                log.error(
+                        "Failed to update sync status after processing real-time events from block {}",
+                        blockNumber, e);
             }
         }
     }
@@ -905,6 +928,109 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
 
         } catch (Exception e) {
             log.error("Failed to restart {} subscription", eventType, e);
+        }
+    }
+
+    @Override
+    public void processUnprocessedEvents() {
+        if (!isListening.get()) {
+            log.debug("Event listener not running, skipping unprocessed events processing");
+            return;
+        }
+
+        try {
+            log.debug("Processing unprocessed events");
+
+            // 获取未处理的事件
+            var unprocessedEvents = eventStorageService
+                    .findUnprocessedEvents(org.springframework.data.domain.PageRequest.of(0, 100));
+
+            if (unprocessedEvents.isEmpty()) {
+                log.debug("No unprocessed events found");
+                return;
+            }
+
+            log.info("Found {} unprocessed events to process", unprocessedEvents.size());
+
+            // 处理每个未处理的事件
+            for (BlockchainEvent event : unprocessedEvents) {
+                try {
+                    processBlockchainEvent(event);
+                } catch (Exception e) {
+                    log.error("Failed to process unprocessed event: id={}, txHash={}, eventType={}",
+                            event.getId(), event.getTransactionHash(), event.getEventName(), e);
+                    // 继续处理下一个事件
+                }
+            }
+
+            log.debug("Completed processing unprocessed events");
+
+        } catch (Exception e) {
+            log.error("Error processing unprocessed events", e);
+        }
+    }
+
+    @Override
+    public void startUnprocessedEventsScheduler() {
+        log.info("Starting unprocessed events scheduler...");
+
+        if (isUnprocessedEventsSchedulerRunning.get()) {
+            log.warn("Unprocessed events scheduler is already running");
+            return;
+        }
+
+        try {
+            unprocessedEventsScheduler = Executors.newSingleThreadScheduledExecutor();
+            isUnprocessedEventsSchedulerRunning.set(true);
+
+            // 启动周期性调度
+            unprocessedEventsScheduler.scheduleAtFixedRate(
+                    this::processUnprocessedEvents,
+                    unprocessedEventsInitialDelaySec,
+                    unprocessedEventsIntervalSec,
+                    TimeUnit.SECONDS
+            );
+
+            log.info("Unprocessed events scheduler started successfully - interval: {}s, initial delay: {}s",
+                    unprocessedEventsIntervalSec, unprocessedEventsInitialDelaySec);
+
+        } catch (Exception e) {
+            log.error("Failed to start unprocessed events scheduler", e);
+            isUnprocessedEventsSchedulerRunning.set(false);
+            throw new BlockchainException("Failed to start unprocessed events scheduler", e);
+        }
+    }
+
+    @Override
+    public void stopUnprocessedEventsScheduler() {
+        log.info("Stopping unprocessed events scheduler...");
+
+        if (!isUnprocessedEventsSchedulerRunning.get()) {
+            log.warn("Unprocessed events scheduler is not running");
+            return;
+        }
+
+        try {
+            isUnprocessedEventsSchedulerRunning.set(false);
+
+            if (unprocessedEventsScheduler != null) {
+                unprocessedEventsScheduler.shutdown();
+                try {
+                    if (!unprocessedEventsScheduler.awaitTermination(10, TimeUnit.SECONDS)) {
+                        unprocessedEventsScheduler.shutdownNow();
+                    }
+                } catch (InterruptedException e) {
+                    unprocessedEventsScheduler.shutdownNow();
+                    Thread.currentThread().interrupt();
+                }
+                unprocessedEventsScheduler = null;
+            }
+
+            log.info("Unprocessed events scheduler stopped successfully");
+
+        } catch (Exception e) {
+            log.error("Failed to stop unprocessed events scheduler", e);
+            throw new BlockchainException("Failed to stop unprocessed events scheduler", e);
         }
     }
 }
