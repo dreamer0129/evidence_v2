@@ -35,17 +35,17 @@ export const menuLinks: HeaderMenuLink[] = [
     icon: <HomeIcon className="h-4 w-4" />,
   },
   {
-    label: "存证",
+    label: "立刻存证",
     href: "/upload",
     icon: <ArrowUpTrayIcon className="h-4 w-4" />,
   },
   {
-    label: "验证",
+    label: "核验中心",
     href: "/verify",
     icon: <CheckBadgeIcon className="h-4 w-4" />,
   },
   {
-    label: "历史",
+    label: "我的存证",
     href: "/history",
     icon: <ClockIcon className="h-4 w-4" />,
   },
