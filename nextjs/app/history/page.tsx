@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { EvidenceTableRow } from "./EvidenceTableRow";
+import { CertificateModal } from "./CertificateModal";
 import { BookOpen, FileText, Inbox, Loader2 } from "lucide-react";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
@@ -14,6 +15,11 @@ import { type EvidenceDetails } from "~~/hooks/scaffold-eth/useEvidenceDetails";
 const History: NextPage = () => {
   const { address } = useAccount();
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceDetails | null>(null);
+  const [certificateModal, setCertificateModal] = useState<{
+    isOpen: boolean;
+    evidenceId: string;
+    fileName?: string;
+  }>({ isOpen: false, evidenceId: "" });
 
   // Fetch user's evidence IDs
   const { data: evidenceIds, isLoading: loadingIds } = useScaffoldReadContract({
@@ -21,6 +27,15 @@ const History: NextPage = () => {
     functionName: "getUserEvidences",
     args: [address],
   });
+
+  // Certificate modal handlers
+  const handleOpenCertificateModal = (evidenceId: string, fileName?: string) => {
+    setCertificateModal({ isOpen: true, evidenceId, fileName });
+  };
+
+  const handleCloseCertificateModal = () => {
+    setCertificateModal({ isOpen: false, evidenceId: "" });
+  };
 
   return (
     <PageBackgroundWrapper>
@@ -78,6 +93,7 @@ const History: NextPage = () => {
                             evidenceId={evidenceId}
                             index={index}
                             onViewDetails={setSelectedEvidence}
+                            onViewCertificate={handleOpenCertificateModal}
                           />
                         ))}
                       </TableBody>
@@ -264,6 +280,14 @@ const History: NextPage = () => {
               </GlassCard>
             </div>
           )}
+
+          {/* Certificate Modal */}
+          <CertificateModal
+            isOpen={certificateModal.isOpen}
+            onClose={handleCloseCertificateModal}
+            evidenceId={certificateModal.evidenceId}
+            fileName={certificateModal.fileName}
+          />
         </div>
       </div>
     </PageBackgroundWrapper>
