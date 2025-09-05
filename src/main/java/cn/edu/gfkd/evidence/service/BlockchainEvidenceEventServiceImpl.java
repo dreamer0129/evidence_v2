@@ -984,14 +984,12 @@ public class BlockchainEvidenceEventServiceImpl implements BlockchainEvidenceEve
             isUnprocessedEventsSchedulerRunning.set(true);
 
             // 启动周期性调度
-            unprocessedEventsScheduler.scheduleAtFixedRate(
-                    this::processUnprocessedEvents,
-                    unprocessedEventsInitialDelaySec,
-                    unprocessedEventsIntervalSec,
-                    TimeUnit.SECONDS
-            );
+            unprocessedEventsScheduler.scheduleAtFixedRate(this::processUnprocessedEvents,
+                    unprocessedEventsInitialDelaySec, unprocessedEventsIntervalSec,
+                    TimeUnit.SECONDS);
 
-            log.info("Unprocessed events scheduler started successfully - interval: {}s, initial delay: {}s",
+            log.info(
+                    "Unprocessed events scheduler started successfully - interval: {}s, initial delay: {}s",
                     unprocessedEventsIntervalSec, unprocessedEventsInitialDelaySec);
 
         } catch (Exception e) {
