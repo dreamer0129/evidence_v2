@@ -11,6 +11,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
+import cn.edu.gfkd.evidence.config.CertificateStorageConfig;
 import cn.edu.gfkd.evidence.entity.EvidenceEntity;
 import lombok.extern.slf4j.Slf4j;
 
