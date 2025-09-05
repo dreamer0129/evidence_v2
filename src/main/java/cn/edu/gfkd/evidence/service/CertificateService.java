@@ -1,11 +1,10 @@
 package cn.edu.gfkd.evidence.service;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -29,26 +28,20 @@ import org.springframework.stereotype.Service;
 
 import cn.edu.gfkd.evidence.entity.EvidenceEntity;
 import cn.edu.gfkd.evidence.exception.CertificateGenerationException;
+import cn.edu.gfkd.evidence.service.storage.CertificateStorage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Service @RequiredArgsConstructor @Slf4j
 public class CertificateService {
 
-    private final CertificateConfig certificateConfig;
+    private final CertificateStorage certificateStorage;
 
     public String generateCertificate(EvidenceEntity evidence)
             throws CertificateGenerationException {
         log.debug("Generating certificate for evidenceId: {}", evidence.getEvidenceId());
 
         try {
-            // Ensure output directory exists
-            String outputDirPath = ensureOutputDirectory();
-
-            // Generate output filename
-            String outputFileName = "certificate_" + evidence.getEvidenceId() + ".pdf";
-            String outputPath = outputDirPath + "/" + outputFileName;
-
             // Load template PDF
             Resource templateResource = new ClassPathResource("static/proof_template.pdf");
             if (!templateResource.exists()) {
@@ -75,11 +68,18 @@ public class CertificateService {
                     throw new CertificateGenerationException("PDF form not found in template");
                 }
 
-                // Save the filled PDF
-                document.save(outputPath);
+                // Save the filled PDF to byte array
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                document.save(outputStream);
+                byte[] certificateBytes = outputStream.toByteArray();
 
-                log.info("Certificate generated successfully: {}", outputPath);
-                return outputPath;
+                // Store certificate using the storage abstraction
+                try (InputStream certificateStream = new ByteArrayInputStream(certificateBytes)) {
+                    String certificateId = certificateStorage.storeCertificate(evidence,
+                            certificateStream);
+                    log.info("Certificate generated and stored with ID: {}", certificateId);
+                    return certificateId;
+                }
 
             }
 
@@ -89,22 +89,6 @@ public class CertificateService {
             throw new CertificateGenerationException(
                     "Failed to generate certificate: " + e.getMessage(), e);
         }
-    }
-
-    private String ensureOutputDirectory() throws IOException {
-        String outputPath = certificateConfig.getOutputPath();
-        Path path = Paths.get(outputPath);
-
-        if (!Files.exists(path)) {
-            if (certificateConfig.isAutoCreateDirectory()) {
-                Files.createDirectories(path);
-                log.info("Created certificate output directory: {}", outputPath);
-            } else {
-                throw new IOException("Output directory does not exist: " + outputPath);
-            }
-        }
-
-        return outputPath;
     }
 
     private PDFont loadFont(PDDocument document) throws IOException {
@@ -214,38 +198,49 @@ public class CertificateService {
         }
     }
 
-    public boolean certificateExists(String certificatePath) {
-        if (certificatePath == null || certificatePath.isEmpty()) {
+    public boolean certificateExists(String certificateId) {
+        if (certificateId == null || certificateId.isEmpty()) {
             return false;
         }
 
-        Path path = Paths.get(certificatePath);
-        return Files.exists(path);
+        try {
+            return certificateStorage.certificateExists(certificateId);
+        } catch (Exception e) {
+            log.warn("Failed to check certificate existence for {}: {}", certificateId,
+                    e.getMessage());
+            return false;
+        }
     }
 
-    public byte[] getCertificateBytes(String certificatePath) throws IOException {
-        if (certificatePath == null || certificatePath.isEmpty()) {
-            throw new IOException("Certificate path is null or empty");
+    public byte[] getCertificateBytes(String certificateId) throws IOException {
+        if (certificateId == null || certificateId.isEmpty()) {
+            throw new IOException("Certificate ID is null or empty");
         }
 
-        Path path = Paths.get(certificatePath);
-        if (!Files.exists(path)) {
-            throw new IOException("Certificate file not found: " + certificatePath);
+        try (InputStream certificateStream = certificateStorage.getCertificate(certificateId)
+                .orElseThrow(() -> new IOException("Certificate not found: " + certificateId))) {
+            return certificateStream.readAllBytes();
         }
-
-        return Files.readAllBytes(path);
     }
 
-    public long getCertificateFileSize(String certificatePath) throws IOException {
-        if (certificatePath == null || certificatePath.isEmpty()) {
+    public long getCertificateFileSize(String certificateId) throws IOException {
+        if (certificateId == null || certificateId.isEmpty()) {
             return 0;
         }
 
-        Path path = Paths.get(certificatePath);
-        if (!Files.exists(path)) {
-            return 0;
+        return certificateStorage.getCertificateSize(certificateId);
+    }
+
+    public boolean deleteCertificate(String certificateId) {
+        if (certificateId == null || certificateId.isEmpty()) {
+            return false;
         }
 
-        return Files.size(path);
+        try {
+            return certificateStorage.deleteCertificate(certificateId);
+        } catch (IOException e) {
+            log.error("Failed to delete certificate {}: {}", certificateId, e.getMessage(), e);
+            return false;
+        }
     }
 }
